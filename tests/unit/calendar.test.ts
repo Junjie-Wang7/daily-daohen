@@ -4,6 +4,7 @@ import {
   getAdjacentMonth,
   getMonthSummary,
   getRecentStreakDays,
+  getRecentStreakInfo,
   getTopTags,
 } from "@/lib/calendar";
 import { createEmptyEntry } from "@/lib/storage";
@@ -26,10 +27,11 @@ function makeEntry(date: string, tags: string[], stone: string) {
 
 describe("calendar helpers", () => {
   it("builds a month grid with leading and trailing cells", () => {
-    const cells = buildMonthCalendar("2026-04", [makeEntry("2026-04-10", [], "主石头")]);
+    const cells = buildMonthCalendar("2026-04", [makeEntry("2026-04-10", [], "主石头")], new Date(2026, 3, 10));
 
     expect(cells.length % 7).toBe(0);
     expect(cells.some((cell) => cell.date === "2026-04-10" && cell.hasRecord)).toBe(true);
+    expect(cells.some((cell) => cell.date === "2026-04-10" && cell.isToday)).toBe(true);
   });
 
   it("returns adjacent months", () => {
@@ -38,19 +40,15 @@ describe("calendar helpers", () => {
   });
 
   it("counts recent consecutive record days ending today", () => {
-    const today = new Date();
-    const format = (offset: number) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - offset);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-        date.getDate(),
-      ).padStart(2, "0")}`;
-    };
+    const referenceDate = new Date(2026, 3, 10);
+    const entries = [makeEntry("2026-04-10", [], ""), makeEntry("2026-04-09", [], ""), makeEntry("2026-04-08", [], "")];
 
-    const entries = [makeEntry(format(0), [], ""), makeEntry(format(1), [], ""), makeEntry(format(2), [], "")];
-
-    expect(getRecentStreakDays(entries)).toBe(3);
-    expect(getRecentStreakDays([makeEntry(format(0), [], "")])).toBe(1);
+    expect(getRecentStreakDays(entries, referenceDate)).toBe(3);
+    expect(getRecentStreakInfo(entries, referenceDate)).toEqual({
+      days: 3,
+      startDate: "2026-04-08",
+      endDate: "2026-04-10",
+    });
   });
 
   it("returns top tags for a month", () => {
@@ -76,9 +74,10 @@ describe("calendar helpers", () => {
       makeEntry("2026-03-31", ["忽略"], "D"),
     ];
 
-    const summary = getMonthSummary("2026-04", entries);
+    const summary = getMonthSummary("2026-04", entries, new Date(2026, 3, 10));
 
     expect(summary.recordDays).toBe(3);
+    expect(summary.recentStreak).toBe(0);
     expect(summary.topTags[0]).toEqual({ tag: "工作", count: 3 });
   });
 });

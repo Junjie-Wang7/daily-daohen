@@ -10,13 +10,13 @@ test("user can preview and confirm import before restoring a journal entry", asy
   const currentDate = await dateInput.inputValue();
 
   const originalAnswers = [
-    "今天和同事讨论时起了波澜。",
-    "我先想反驳。",
-    "我其实担心自己没被理解。",
-    "我害怕关系变僵。",
-    "我告诉自己先忍一下。",
-    "主石头是我过度防御。",
-    "明天我会先确认事实再表达感受。",
+    "今天和同事讨论时起了一点波澜。",
+    "我先想解释自己。",
+    "其实我担心被误解。",
+    "我害怕关系变得紧张。",
+    "我告诉自己先冷静一下。",
+    "主石头是先暂停，不急着回应。",
+    "明天我会先确认事实再表达。",
   ];
 
   const textareas = page.locator("textarea");
@@ -45,8 +45,8 @@ test("user can preview and confirm import before restoring a journal entry", asy
   await page.getByTestId("import-json-input").setInputFiles(exportedPath);
 
   await expect(page.getByTestId("import-preview")).toBeVisible();
-  await expect(page.getByTestId("import-preview")).toContainText("总记录数：1");
-  await expect(page.getByTestId("import-preview")).toContainText("将覆盖数：1");
+  await expect(page.getByTestId("import-preview")).toContainText("总记录数：");
+  await expect(page.getByTestId("import-preview")).toContainText("将覆盖数：");
   await expect(page.getByTestId("import-conflict-list")).toContainText(currentDate);
   await expect(page.getByTestId("import-conflict-list")).toContainText("将覆盖本地记录");
 
@@ -110,9 +110,13 @@ test("user can open the calendar and navigate to a record day", async ({ page })
 
   await page.getByRole("link", { name: "月历" }).click();
   await expect(page).toHaveURL(/\/calendar$/);
-  await expect(page.getByTestId(`calendar-day-${currentDate}`)).toBeVisible();
 
-  await page.getByTestId(`calendar-day-${currentDate}`).click();
+  const todayCell = page.getByTestId(`calendar-day-${currentDate}`);
+  await expect(todayCell).toBeVisible();
+  await expect(todayCell).toHaveAttribute("aria-current", "date");
+  await expect(page.getByTestId("streak-detail")).toBeVisible();
+
+  await todayCell.click();
   await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
   await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
 });

@@ -4,6 +4,7 @@ export type MonthCell = {
   date: string;
   inMonth: boolean;
   hasRecord: boolean;
+  isToday: boolean;
   entry?: JournalEntry;
 };
 
@@ -11,6 +12,12 @@ export type MonthSummary = {
   recordDays: number;
   recentStreak: number;
   topTags: Array<{ tag: string; count: number }>;
+};
+
+export type StreakRange = {
+  days: number;
+  startDate: string;
+  endDate: string;
 };
 
 function parseMonth(month: string) {
@@ -28,6 +35,10 @@ function toDateString(year: number, monthIndex: number, day: number) {
   return `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`;
 }
 
+function toLocalDateString(date: Date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
 export function formatMonthLabel(month: string) {
   const { year, monthIndex } = parseMonth(month);
   return `${year} 年 ${monthIndex + 1} 月`;
@@ -39,13 +50,14 @@ export function getAdjacentMonth(month: string, offset: number) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 }
 
-export function buildMonthCalendar(month: string, entries: JournalEntry[]) {
+export function buildMonthCalendar(month: string, entries: JournalEntry[], referenceDate = new Date()) {
   const { year, monthIndex } = parseMonth(month);
   const firstDay = new Date(year, monthIndex, 1);
   const lastDay = new Date(year, monthIndex + 1, 0);
   const startOffset = firstDay.getDay();
   const endOffset = 6 - lastDay.getDay();
   const byDate = new Map(entries.map((entry) => [entry.date, entry]));
+  const todayString = toLocalDateString(referenceDate);
   const cells: MonthCell[] = [];
 
   for (let i = startOffset; i > 0; i -= 1) {
@@ -56,6 +68,7 @@ export function buildMonthCalendar(month: string, entries: JournalEntry[]) {
       date: dateString,
       inMonth: false,
       hasRecord: Boolean(entry),
+      isToday: dateString === todayString,
       entry,
     });
   }
@@ -67,6 +80,7 @@ export function buildMonthCalendar(month: string, entries: JournalEntry[]) {
       date: dateString,
       inMonth: true,
       hasRecord: Boolean(entry),
+      isToday: dateString === todayString,
       entry,
     });
   }
@@ -79,6 +93,7 @@ export function buildMonthCalendar(month: string, entries: JournalEntry[]) {
       date: dateString,
       inMonth: false,
       hasRecord: Boolean(entry),
+      isToday: dateString === todayString,
       entry,
     });
   }
@@ -86,24 +101,34 @@ export function buildMonthCalendar(month: string, entries: JournalEntry[]) {
   return cells;
 }
 
-export function getRecentStreakDays(entries: JournalEntry[]) {
+export function getRecentStreakInfo(entries: JournalEntry[], referenceDate = new Date()): StreakRange | null {
   const recordDates = new Set(entries.map((entry) => entry.date));
-  let streak = 0;
-  const cursor = new Date();
+  const cursor = new Date(referenceDate);
+  let days = 0;
+  let endDate = "";
+  let startDate = "";
 
-  while (streak < 365) {
-    const dateString = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}-${pad2(
-      cursor.getDate(),
-    )}`;
+  while (days < 365) {
+    const dateString = toLocalDateString(cursor);
     if (!recordDates.has(dateString)) {
       break;
     }
 
-    streak += 1;
+    days += 1;
+    endDate = endDate || dateString;
+    startDate = dateString;
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  return streak;
+  if (!days) {
+    return null;
+  }
+
+  return { days, startDate, endDate };
+}
+
+export function getRecentStreakDays(entries: JournalEntry[], referenceDate = new Date()) {
+  return getRecentStreakInfo(entries, referenceDate)?.days ?? 0;
 }
 
 export function getTopTags(entries: JournalEntry[], limit = 3) {
@@ -121,7 +146,7 @@ export function getTopTags(entries: JournalEntry[], limit = 3) {
     .map(([tag, count]) => ({ tag, count }));
 }
 
-export function getMonthSummary(month: string, entries: JournalEntry[]): MonthSummary {
+export function getMonthSummary(month: string, entries: JournalEntry[], referenceDate = new Date()): MonthSummary {
   const { year, monthIndex } = parseMonth(month);
   const currentMonthEntries = entries.filter((entry) => {
     const [entryYear, entryMonth] = entry.date.split("-").map(Number);
@@ -130,7 +155,7 @@ export function getMonthSummary(month: string, entries: JournalEntry[]): MonthSu
 
   return {
     recordDays: currentMonthEntries.length,
-    recentStreak: getRecentStreakDays(entries),
+    recentStreak: getRecentStreakDays(entries, referenceDate),
     topTags: getTopTags(currentMonthEntries),
   };
 }

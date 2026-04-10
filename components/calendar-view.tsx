@@ -7,6 +7,7 @@ import {
   formatMonthLabel,
   getAdjacentMonth,
   getMonthSummary,
+  getRecentStreakInfo,
 } from "@/lib/calendar";
 import { readStore } from "@/lib/storage";
 
@@ -35,13 +36,12 @@ export function CalendarView() {
 
   if (!mounted) {
     return (
-      <div className="section-card px-5 py-10 text-sm leading-7 text-ink/65 md:px-8">
-        正在准备月历视图……
-      </div>
+      <div className="section-card px-5 py-10 text-sm leading-7 text-ink/65 md:px-8">正在准备月历视图…</div>
     );
   }
 
   const summary = getMonthSummary(month, entries);
+  const streakInfo = getRecentStreakInfo(entries);
   const cells = buildMonthCalendar(month, entries);
   const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -55,25 +55,13 @@ export function CalendarView() {
               <h2 className="font-serif text-2xl">{formatMonthLabel(month)}</h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMonth(getAdjacentMonth(month, -1))}
-                className="soft-button"
-              >
+              <button type="button" onClick={() => setMonth(getAdjacentMonth(month, -1))} className="soft-button">
                 上个月
               </button>
-              <button
-                type="button"
-                onClick={() => setMonth(toMonthString(new Date()))}
-                className="soft-button"
-              >
+              <button type="button" onClick={() => setMonth(toMonthString(new Date()))} className="soft-button">
                 本月
               </button>
-              <button
-                type="button"
-                onClick={() => setMonth(getAdjacentMonth(month, 1))}
-                className="soft-button"
-              >
+              <button type="button" onClick={() => setMonth(getAdjacentMonth(month, 1))} className="soft-button">
                 下个月
               </button>
             </div>
@@ -85,8 +73,13 @@ export function CalendarView() {
               <p className="mt-2 font-serif text-3xl text-ink">{summary.recordDays}</p>
             </div>
             <div className="rounded-[28px] border border-line/70 bg-white/60 px-4 py-4">
-              <p className="text-xs tracking-[0.2em] text-accent/80">最近连续记录天数</p>
+              <p className="text-xs tracking-[0.2em] text-accent/80">最近连续记录</p>
               <p className="mt-2 font-serif text-3xl text-ink">{summary.recentStreak}</p>
+              <p className="mt-2 text-sm leading-6 text-ink/70" data-testid="streak-detail">
+                {streakInfo
+                  ? `最近连续记录：${streakInfo.days} 天（${streakInfo.startDate} 至 ${streakInfo.endDate}）`
+                  : "最近连续记录：0 天"}
+              </p>
             </div>
             <div className="rounded-[28px] border border-line/70 bg-white/60 px-4 py-4">
               <p className="text-xs tracking-[0.2em] text-accent/80">最常见标签</p>
@@ -98,7 +91,7 @@ export function CalendarView() {
                     </p>
                   ))
                 ) : (
-                  <p>本月暂未设置标签</p>
+                  <p>本月暂无标签</p>
                 )}
               </div>
             </div>
@@ -121,6 +114,9 @@ export function CalendarView() {
               const recordStyle = cell.hasRecord
                 ? "border-accent/60 bg-rice shadow-[0_0_0_1px_rgba(133,114,92,0.08)]"
                 : "border-line/70 bg-white/50";
+              const todayStyle = cell.isToday
+                ? "ring-1 ring-accent/35 ring-offset-1 ring-offset-background"
+                : "";
 
               return (
                 <Link
@@ -128,16 +124,20 @@ export function CalendarView() {
                   href={`/records/${cell.date}`}
                   data-testid={`calendar-day-${cell.date}`}
                   aria-label={`查看 ${cell.date}`}
-                  className={`min-h-20 rounded-3xl border px-2 py-2 text-left transition hover:border-accent/70 hover:bg-white ${inMonthStyle} ${recordStyle}`}
+                  aria-current={cell.isToday ? "date" : undefined}
+                  className={`min-h-20 rounded-3xl border px-2 py-2 text-left transition hover:border-accent/70 hover:bg-white ${inMonthStyle} ${recordStyle} ${todayStyle}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-sm font-medium">{Number(cell.date.slice(-2))}</span>
-                    {cell.hasRecord ? (
-                      <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-accent" />
-                    ) : null}
+                    {cell.hasRecord ? <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-accent" /> : null}
                   </div>
+                  {cell.isToday ? (
+                    <span className="mt-2 inline-flex rounded-full border border-accent/20 bg-accent/5 px-1.5 py-0.5 text-[10px] leading-none text-accent">
+                      今天
+                    </span>
+                  ) : null}
                   {cell.hasRecord ? (
-                    <p className="mt-3 overflow-hidden text-[11px] leading-5 text-ink/75">
+                    <p className="mt-2 overflow-hidden text-[11px] leading-5 text-ink/75">
                       {cell.entry?.answers.stone || cell.entry?.answers.event || "有记录"}
                     </p>
                   ) : null}
