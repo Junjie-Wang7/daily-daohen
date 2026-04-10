@@ -20,6 +20,25 @@ export type StreakRange = {
   endDate: string;
 };
 
+export type CalendarDayPreview = {
+  date: string;
+  hasRecord: boolean;
+  title: string;
+  summary: string;
+  tags: string[];
+  tagLabel: string;
+  emptyMessage: string;
+};
+
+const PREVIEW_SOURCE_IDS: Array<keyof JournalEntry["answers"]> = [
+  "event",
+  "thought",
+  "fear",
+  "reason",
+  "choice",
+  "stone",
+];
+
 function parseMonth(month: string) {
   const [yearText, monthText] = month.split("-");
   const year = Number(yearText);
@@ -37,6 +56,38 @@ function toDateString(year: number, monthIndex: number, day: number) {
 
 function toLocalDateString(date: Date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function normalizePreviewText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function truncatePreviewText(text: string, limit = 36) {
+  const normalized = normalizePreviewText(text);
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, limit).trimEnd()}…`;
+}
+
+function pickPreviewSummary(entry: JournalEntry) {
+  for (const id of PREVIEW_SOURCE_IDS) {
+    const text = truncatePreviewText(entry.answers[id], 36);
+    if (text) {
+      return text;
+    }
+  }
+
+  return "今天还没有留下可读的摘要。";
+}
+
+function formatTags(tags: string[]) {
+  return tags.length ? tags.map((tag) => `#${tag}`).join(" ") : "暂无标签";
 }
 
 export function formatMonthLabel(month: string) {
@@ -157,6 +208,30 @@ export function getMonthSummary(month: string, entries: JournalEntry[], referenc
     recordDays: currentMonthEntries.length,
     recentStreak: getRecentStreakDays(entries, referenceDate),
     topTags: getTopTags(currentMonthEntries),
+  };
+}
+
+export function getCalendarDayPreview(entry: JournalEntry | undefined, date: string): CalendarDayPreview {
+  if (!entry) {
+    return {
+      date,
+      hasRecord: false,
+      title: "这一天还没有留下道痕",
+      summary: "可以先写下今天，再回来慢慢看。",
+      tags: [],
+      tagLabel: "暂无标签",
+      emptyMessage: "这一天还没有留下道痕",
+    };
+  }
+
+  return {
+    date,
+    hasRecord: true,
+    title: entry.answers.stone.trim() || entry.answers.event.trim() || "今日留痕",
+    summary: pickPreviewSummary(entry),
+    tags: entry.tags,
+    tagLabel: formatTags(entry.tags),
+    emptyMessage: "",
   };
 }
 

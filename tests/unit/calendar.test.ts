@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMonthCalendar,
   getAdjacentMonth,
+  getCalendarDayPreview,
   getMonthSummary,
   getRecentStreakDays,
   getRecentStreakInfo,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/calendar";
 import { createEmptyEntry } from "@/lib/storage";
 
-function makeEntry(date: string, tags: string[], stone: string) {
+function makeEntry(date: string, tags: string[], stone: string, answers: Partial<Record<string, string>> = {}) {
   return {
     ...createEmptyEntry(date),
     tags,
@@ -21,6 +22,7 @@ function makeEntry(date: string, tags: string[], stone: string) {
       reason: "",
       stone,
       choice: "",
+      ...answers,
     },
   };
 }
@@ -79,5 +81,34 @@ describe("calendar helpers", () => {
     expect(summary.recordDays).toBe(3);
     expect(summary.recentStreak).toBe(0);
     expect(summary.topTags[0]).toEqual({ tag: "工作", count: 3 });
+  });
+
+  it("creates a gentle preview for a day with a record", () => {
+    const entry = makeEntry("2026-04-10", ["工作", "复盘"], "今天先稳住", {
+      event: "今天先稳住局面，再慢慢看清发生了什么。",
+      thought: "其实我想要的是被理解。",
+    });
+
+    expect(getCalendarDayPreview(entry, entry.date)).toEqual({
+      date: "2026-04-10",
+      hasRecord: true,
+      title: "今天先稳住",
+      summary: "今天先稳住局面，再慢慢看清发生了什么。",
+      tags: ["工作", "复盘"],
+      tagLabel: "#工作 #复盘",
+      emptyMessage: "",
+    });
+  });
+
+  it("creates a gentle empty preview for a day without a record", () => {
+    expect(getCalendarDayPreview(undefined, "2026-04-11")).toEqual({
+      date: "2026-04-11",
+      hasRecord: false,
+      title: "这一天还没有留下道痕",
+      summary: "可以先写下今天，再回来慢慢看。",
+      tags: [],
+      tagLabel: "暂无标签",
+      emptyMessage: "这一天还没有留下道痕",
+    });
   });
 });

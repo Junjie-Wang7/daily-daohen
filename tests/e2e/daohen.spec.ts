@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
 test.setTimeout(60000);
 
@@ -25,7 +25,7 @@ test("user can preview and confirm import before restoring a journal entry", asy
   }
 
   await page.locator('input:not([type="date"])').first().fill("工作, 关系");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.goto("/history");
 
@@ -38,7 +38,7 @@ test("user can preview and confirm import before restoring a journal entry", asy
   await page.goto("/");
   await page.locator("textarea").nth(0).fill("这是一条被覆盖的内容。");
   await page.locator("textarea").nth(5).fill("这是一块新的石头。");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.goto("/history");
   await page.locator('input[value="overwrite"]').check();
@@ -76,7 +76,7 @@ test("user can clear all records and create a new one afterward", async ({ page 
 
   await page.locator("textarea").nth(0).fill("第一条记录");
   await page.locator("textarea").nth(5).fill("第一块石头");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.goto("/history");
   await expect(page.locator("article")).toHaveCount(1);
@@ -92,7 +92,7 @@ test("user can clear all records and create a new one afterward", async ({ page 
   await page.goto("/");
   await page.locator("textarea").nth(0).fill("清空后的新记录");
   await page.locator("textarea").nth(5).fill("新的主石头");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.goto("/history");
   await expect(page.locator("article")).toHaveCount(1);
@@ -106,7 +106,7 @@ test("user can open the calendar and navigate to a record day", async ({ page })
   const currentDate = await page.locator('input[type="date"]').inputValue();
   await page.locator("textarea").nth(0).fill("月历测试记录");
   await page.locator("textarea").nth(5).fill("月历主石头");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.getByRole("link", { name: "月历" }).click();
   await expect(page).toHaveURL(/\/calendar$/);
@@ -117,8 +117,43 @@ test("user can open the calendar and navigate to a record day", async ({ page })
   await expect(page.getByTestId("streak-detail")).toBeVisible();
 
   await todayCell.click();
+  await expect(page.getByTestId("calendar-preview")).toBeVisible();
+  const readableDate = currentDate.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$1 年 $2 月 $3 日");
+  await expect(page.getByTestId("calendar-preview")).toContainText(readableDate);
+  await expect(page.getByTestId("calendar-preview")).toContainText("月历测试记录");
+
+  await page.getByRole("link", { name: "查看当天详情" }).click();
   await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
   await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
+});
+
+test("user can preview an empty calendar day before opening its record page", async ({ page }) => {
+  await page.goto("/");
+  const currentDate = await page.locator('input[type="date"]').inputValue();
+
+  const emptyDate = (() => {
+    const date = new Date(`${currentDate}T00:00:00`);
+    date.setDate(date.getDate() + 1);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  })();
+
+  await page.locator("textarea").nth(0).fill("月历空状态测试");
+  await page.locator("textarea").nth(5).fill("月历空状态主石头");
+  await page.getByRole("button", { name: "立即留痕" }).click();
+
+  await page.getByRole("link", { name: "月历" }).click();
+  const emptyCell = page.getByTestId(`calendar-day-${emptyDate}`);
+  await expect(emptyCell).toBeVisible();
+  await emptyCell.click();
+
+  await expect(page.getByTestId("calendar-preview")).toContainText("这一天还没有留下道痕");
+  await expect(page.getByRole("link", { name: /前往当天记录页|去写今天/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "关闭预览" }).click();
+  await expect(page.getByTestId("calendar-preview")).toContainText("先点开某一天");
 });
 
 test("user can filter review entries by keyword, tag and stone, then clear the filter", async ({ page }) => {
@@ -171,7 +206,7 @@ test("user can filter review entries by keyword, tag and stone, then clear the f
     await page.locator("textarea").nth(3).fill(record.fear);
     await page.locator("textarea").nth(5).fill(record.stone);
     await page.locator('input:not([type="date"])').first().fill(record.tags);
-    await page.locator("button").first().click();
+    await page.getByRole("button", { name: "立即留痕" }).click();
   }
 
   await page.getByRole("link", { name: "回顾" }).click();
@@ -217,7 +252,7 @@ test("user sees a friendly empty state when the current review range has no reco
   await page.goto(`/records/${oldDate}`);
   await page.locator("textarea").nth(0).fill("四十天前的记录");
   await page.locator("textarea").nth(5).fill("旧主石头");
-  await page.locator("button").first().click();
+  await page.getByRole("button", { name: "立即留痕" }).click();
 
   await page.getByRole("link", { name: "回顾" }).click();
   await expect(page).toHaveURL(/\/review$/);
@@ -230,6 +265,19 @@ test("user sees a friendly empty state when the current review range has no reco
 test("user sees a gentle loading state before today's editor appears", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.locator("textarea")).toHaveCount(7);
+});
+
+test("user can open and close the lightweight introduction on the home page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("home-intro-toggle")).toBeVisible();
+
+  await page.getByTestId("home-intro-toggle").click();
+  await expect(page.getByTestId("home-intro-panel")).toBeVisible();
+  await expect(page.getByTestId("home-intro-panel")).toContainText("道痕，是你一天里真正发生过");
+
+  await page.getByTestId("home-intro-close").click();
+  await expect(page.getByTestId("home-intro-toggle")).toBeVisible();
   await expect(page.locator("textarea")).toHaveCount(7);
 });
 
@@ -266,3 +314,4 @@ test("mobile editor keeps the main controls easy to reach", async ({ page }) => 
   expect(saveBox?.height ?? 0).toBeGreaterThan(40);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
