@@ -51,6 +51,20 @@ export function EntryEditor({
       }));
     };
 
+  const handleDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextDate = event.target.value;
+    if (!nextDate) {
+      return;
+    }
+
+    if (nextDate === todayDateString() && allowNavigateHome) {
+      router.push("/");
+      return;
+    }
+
+    router.push(`/records/${nextDate}`);
+  };
+
   const handleSave = () => {
     const saved = saveEntry({
       ...entry,
@@ -76,33 +90,23 @@ export function EntryEditor({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.9fr)]">
       <section className="section-card">
         <div className="flex flex-col gap-6 px-5 py-6 md:px-8 md:py-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
               <p className="text-xs tracking-[0.3em] text-accent/80">DATE</p>
               <h2 className="font-serif text-2xl">{formatDisplayDate(date)}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <label className="soft-button cursor-pointer">
-                <span>切换日期</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex min-w-[200px] flex-col gap-2 text-sm text-ink">
+                <span className="text-xs tracking-[0.2em] text-accent/80">切换日期</span>
                 <input
                   type="date"
                   value={date}
-                  className="sr-only"
-                  onChange={(event) => {
-                    const nextDate = event.target.value;
-                    if (!nextDate) {
-                      return;
-                    }
-                    if (nextDate === todayDateString() && allowNavigateHome) {
-                      router.push("/");
-                      return;
-                    }
-                    router.push(`/records/${nextDate}`);
-                  }}
+                  onChange={handleDateChange}
+                  className="rounded-full border border-line bg-white/80 px-4 py-2 text-sm text-ink outline-none transition focus:border-accent/70 focus:bg-white"
                 />
               </label>
               {!isToday && allowNavigateHome ? (
-                <Link href="/" className="soft-button">
+                <Link href="/" className="soft-button sm:mb-[1px]">
                   回到今日
                 </Link>
               ) : null}

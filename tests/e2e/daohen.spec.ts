@@ -50,3 +50,14 @@ test("user can create, persist, import, and restore a journal entry", async ({ p
   await expect(page.locator("textarea").nth(0)).toHaveValue(originalAnswers[0]);
   await expect(page.locator("textarea").nth(5)).toHaveValue(originalAnswers[5]);
 });
+
+test("user can switch date from the visible date input", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("textarea")).toHaveCount(7);
+
+  const targetDate = "2026-04-09";
+  await page.locator('input[type="date"]').fill(targetDate);
+
+  await expect(page).toHaveURL(new RegExp(`/records/${targetDate}$`));
+  await expect(page.locator('input[type="date"]')).toHaveValue(targetDate);
+});

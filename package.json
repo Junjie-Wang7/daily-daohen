@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/clean-next.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "npm run test:unit && npm run test:e2e",
