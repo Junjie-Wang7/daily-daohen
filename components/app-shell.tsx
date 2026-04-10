@@ -8,6 +8,7 @@ const links = [
   { href: "/", label: "今日道痕" },
   { href: "/history", label: "历史记录" },
   { href: "/calendar", label: "月历" },
+  { href: "/review", label: "回顾" },
 ];
 
 export function AppShell({
@@ -35,7 +36,6 @@ export function AppShell({
               <nav className="flex flex-wrap gap-2">
                 {links.map((link) => {
                   const active = pathname === link.href;
-
                   return (
                     <Link
                       key={link.href}
