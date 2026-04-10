@@ -98,3 +98,21 @@ test("user can clear all records and create a new one afterward", async ({ page 
   await expect(page.locator("article")).toHaveCount(1);
   await expect(page.locator("article")).toContainText("新的主石头");
 });
+
+test("user can open the calendar and navigate to a record day", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("textarea")).toHaveCount(7);
+
+  const currentDate = await page.locator('input[type="date"]').inputValue();
+  await page.locator("textarea").nth(0).fill("月历测试记录");
+  await page.locator("textarea").nth(5).fill("月历主石头");
+  await page.locator("button").first().click();
+
+  await page.getByRole("link", { name: "月历" }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page.getByTestId(`calendar-day-${currentDate}`)).toBeVisible();
+
+  await page.getByTestId(`calendar-day-${currentDate}`).click();
+  await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
+  await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
+});

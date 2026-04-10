@@ -7,6 +7,7 @@ import { ReactNode } from "react";
 const links = [
   { href: "/", label: "今日道痕" },
   { href: "/history", label: "历史记录" },
+  { href: "/calendar", label: "月历" },
 ];
 
 export function AppShell({
