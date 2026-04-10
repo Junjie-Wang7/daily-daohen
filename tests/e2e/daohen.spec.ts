@@ -47,6 +47,8 @@ test("user can preview and confirm import before restoring a journal entry", asy
   await expect(page.getByTestId("import-preview")).toBeVisible();
   await expect(page.getByTestId("import-preview")).toContainText("总记录数：1");
   await expect(page.getByTestId("import-preview")).toContainText("将覆盖数：1");
+  await expect(page.getByTestId("import-conflict-list")).toContainText(currentDate);
+  await expect(page.getByTestId("import-conflict-list")).toContainText("将覆盖本地记录");
 
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByTestId("confirm-import-button").click();

@@ -6,10 +6,12 @@ import {
   exportEntryMarkdown,
   getStorageKey,
   importEntriesJson,
+  MAX_IMPORT_FILE_SIZE_BYTES,
   previewImportJson,
   readStore,
   saveEntry,
   searchEntries,
+  validateImportFile,
 } from "@/lib/storage";
 
 type StorageMap = Map<string, string>;
@@ -238,6 +240,9 @@ describe("import preview and import", () => {
       expect(preview.summary.duplicateDates).toBe(1);
       expect(preview.summary.finalTotal).toBe(2);
       expect(preview.summary.replacedRecords).toBe(0);
+      expect(preview.conflicts).toHaveLength(1);
+      expect(preview.conflicts[0].date).toBe("2026-04-10");
+      expect(preview.conflicts[0].resolution).toContain("导入记录");
     }
   });
 
@@ -270,6 +275,36 @@ describe("import preview and import", () => {
       expect(preview.summary.duplicateDates).toBe(0);
       expect(preview.summary.replacedRecords).toBe(1);
       expect(preview.summary.finalTotal).toBe(1);
+      expect(preview.conflicts).toEqual([]);
+    }
+  });
+
+  it("lists conflict details for overwrite preview", () => {
+    const preview = previewImportJson(
+      JSON.stringify([
+        {
+          date: "2026-04-10",
+          tags: ["覆盖"],
+          answers: {
+            event: "覆盖本地",
+            reaction: "",
+            thought: "",
+            fear: "",
+            reason: "",
+            stone: "",
+            choice: "",
+          },
+          createdAt: "2026-04-10T08:00:00.000Z",
+          updatedAt: "2026-04-10T08:30:00.000Z",
+        },
+      ]),
+      "overwrite",
+    );
+
+    expect(preview.ok).toBe(true);
+    if (preview.ok) {
+      expect(preview.conflicts).toHaveLength(1);
+      expect(preview.conflicts[0].resolution).toBe("将覆盖本地记录");
     }
   });
 
@@ -324,6 +359,24 @@ describe("import preview and import", () => {
     expect(preview).toEqual({
       ok: false,
       message: "导入失败：文件中没有可恢复的有效记录。",
+    });
+  });
+
+  it("rejects non-json file names", () => {
+    const validation = validateImportFile("records.txt", 10);
+
+    expect(validation).toEqual({
+      ok: false,
+      message: "无法导入：请选择 .json 格式的文件。",
+    });
+  });
+
+  it("rejects files that exceed the size limit", () => {
+    const validation = validateImportFile("records.json", MAX_IMPORT_FILE_SIZE_BYTES + 1);
+
+    expect(validation).toEqual({
+      ok: false,
+      message: "无法导入：文件大小超过限制，当前仅支持不超过 1 MB 的 JSON 文件。",
     });
   });
 });

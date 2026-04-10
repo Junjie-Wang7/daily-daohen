@@ -9,10 +9,12 @@ import {
   formatDisplayDate,
   importEntriesJson,
   ImportStrategy,
+  MAX_IMPORT_FILE_SIZE_BYTES,
   previewImportJson,
   readStore,
   restoreEntries,
   searchEntries,
+  validateImportFile,
 } from "@/lib/storage";
 import { JournalEntry } from "@/lib/types";
 
@@ -27,6 +29,12 @@ type PendingImport = {
     replacedRecords: number;
     finalTotal: number;
   };
+  conflicts: Array<{
+    date: string;
+    localUpdatedAt: string;
+    importUpdatedAt: string;
+    resolution: string;
+  }>;
 };
 
 export function HistoryList() {
@@ -75,9 +83,10 @@ export function HistoryList() {
       return;
     }
 
-    if (!file.name.toLowerCase().endsWith(".json")) {
+    const validation = validateImportFile(file.name, file.size);
+    if (!validation.ok) {
       setPendingImport(null);
-      updateStatus("导入失败：请选择 .json 文件。", true);
+      updateStatus(validation.message, true);
       return;
     }
 
@@ -100,6 +109,7 @@ export function HistoryList() {
         fileName: file.name,
         strategy: importStrategy,
         summary: preview.summary,
+        conflicts: preview.conflicts,
       });
       updateStatus("已生成导入预览，请确认后再执行。");
     } catch {
@@ -201,6 +211,9 @@ export function HistoryList() {
             <p className="mt-2 text-xs leading-6 text-ink/70">
               先解析并预览导入内容，确认后才会真正恢复到当前浏览器。
             </p>
+            <p className="mt-2 text-xs leading-6 text-ink/60">
+              文件大小限制：不超过 {Math.floor(MAX_IMPORT_FILE_SIZE_BYTES / 1024 / 1024)} MB。
+            </p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-ink">
               <label className="flex items-center gap-2">
                 <input
@@ -261,6 +274,32 @@ export function HistoryList() {
                   <p>将合并后总数：{pendingImport.summary.finalTotal}</p>
                 )}
               </div>
+              {pendingImport.conflicts.length > 0 ? (
+                <div className="mt-4 rounded-2xl border border-line/70 bg-white/70 px-3 py-3">
+                  <p className="text-sm text-ink">冲突日期明细</p>
+                  <p className="mt-2 text-xs leading-6 text-ink/70">
+                    仅展示前 {Math.min(5, pendingImport.conflicts.length)} 条冲突记录。
+                  </p>
+                  <div className="mt-3 space-y-2" data-testid="import-conflict-list">
+                    {pendingImport.conflicts.slice(0, 5).map((conflict) => (
+                      <div
+                        key={conflict.date}
+                        className="rounded-2xl border border-line/70 bg-rice/70 px-3 py-3 text-xs leading-6 text-ink"
+                      >
+                        <p>日期：{conflict.date}</p>
+                        <p>本地更新时间：{new Date(conflict.localUpdatedAt).toLocaleString("zh-CN")}</p>
+                        <p>导入更新时间：{new Date(conflict.importUpdatedAt).toLocaleString("zh-CN")}</p>
+                        <p className="text-accent">{conflict.resolution}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {pendingImport.conflicts.length > 5 ? (
+                    <p className="mt-2 text-xs leading-6 text-ink/60">
+                      另有 {pendingImport.conflicts.length - 5} 条冲突未展开显示。
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {pendingImport.strategy === "overwrite" ? (
                 <p className="mt-3 text-xs leading-6 text-[#a14f4f]">
                   覆盖模式会替换当前浏览器中的全部记录，请确认无误后再继续。

@@ -2,6 +2,7 @@ import { QUESTIONS } from "@/lib/questions";
 import { JournalEntry, JournalStore, QuestionId } from "@/lib/types";
 
 const STORAGE_KEY = "daily-daohen-store";
+export const MAX_IMPORT_FILE_SIZE_BYTES = 1024 * 1024;
 
 export type ImportStrategy = "overwrite" | "merge";
 
@@ -28,6 +29,12 @@ export type ImportPreviewResult =
         replacedRecords: number;
         finalTotal: number;
       };
+      conflicts: Array<{
+        date: string;
+        localUpdatedAt: string;
+        importUpdatedAt: string;
+        resolution: string;
+      }>;
       strategy: ImportStrategy;
     }
   | {
@@ -169,6 +176,26 @@ function parseImportEntries(content: string) {
   };
 }
 
+export function validateImportFile(fileName: string, fileSize: number) {
+  if (!fileName.toLowerCase().endsWith(".json")) {
+    return {
+      ok: false as const,
+      message: "无法导入：请选择 .json 格式的文件。",
+    };
+  }
+
+  if (fileSize > MAX_IMPORT_FILE_SIZE_BYTES) {
+    return {
+      ok: false as const,
+      message: `无法导入：文件大小超过限制，当前仅支持不超过 ${Math.floor(
+        MAX_IMPORT_FILE_SIZE_BYTES / 1024 / 1024,
+      )} MB 的 JSON 文件。`,
+    };
+  }
+
+  return { ok: true as const };
+}
+
 export function createEmptyEntry(date: string): JournalEntry {
   const now = new Date().toISOString();
   return {
@@ -242,6 +269,7 @@ export function previewImportJson(
   }
 
   const currentEntries = readStore().entries;
+  const currentMap = new Map(currentEntries.map((entry) => [entry.date, entry]));
   const currentDates = new Set(currentEntries.map((entry) => entry.date));
   const duplicateDates = parsed.entries.filter((entry) => currentDates.has(entry.date)).length;
   const newRecords = parsed.entries.length - duplicateDates;
@@ -249,6 +277,24 @@ export function previewImportJson(
     strategy === "overwrite"
       ? parsed.entries.length
       : dedupeEntries([...currentEntries, ...parsed.entries]).length;
+  const conflicts = parsed.entries
+    .filter((entry) => currentDates.has(entry.date))
+    .map((entry) => {
+      const localEntry = currentMap.get(entry.date)!;
+      const keepImported = timestampValue(entry.updatedAt) >= timestampValue(localEntry.updatedAt);
+
+      return {
+        date: entry.date,
+        localUpdatedAt: localEntry.updatedAt,
+        importUpdatedAt: entry.updatedAt,
+        resolution:
+          strategy === "overwrite"
+            ? "将覆盖本地记录"
+            : keepImported
+              ? "将按 updatedAt 保留导入记录"
+              : "将按 updatedAt 保留本地记录",
+      };
+    });
 
   return {
     ok: true,
@@ -261,6 +307,7 @@ export function previewImportJson(
       replacedRecords: strategy === "overwrite" ? currentEntries.length : 0,
       finalTotal,
     },
+    conflicts,
   };
 }
 
