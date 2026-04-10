@@ -17,6 +17,24 @@ export type ImportResult =
       message: string;
     };
 
+export type ImportPreviewResult =
+  | {
+      ok: true;
+      entries: JournalEntry[];
+      summary: {
+        totalRecords: number;
+        newRecords: number;
+        duplicateDates: number;
+        replacedRecords: number;
+        finalTotal: number;
+      };
+      strategy: ImportStrategy;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 function blankAnswers(): Record<QuestionId, string> {
   return QUESTIONS.reduce(
     (acc, question) => {
@@ -130,7 +148,7 @@ function parseImportEntries(content: string) {
   if (!rawEntries) {
     return {
       ok: false as const,
-      message: "导入失败：文件格式不正确，应为导出的 JSON 数组。",
+      message: "导入失败：JSON 结构不符合要求，应为导出的 JSON 数组。",
     };
   }
 
@@ -195,6 +213,10 @@ export function writeStore(store: JournalStore) {
   );
 }
 
+export function restoreEntries(entries: JournalEntry[]) {
+  writeStore({ entries });
+}
+
 export function clearAllEntries() {
   if (typeof window === "undefined") {
     return;
@@ -203,7 +225,10 @@ export function clearAllEntries() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries: [] }));
 }
 
-export function importEntriesJson(content: string, strategy: ImportStrategy): ImportResult {
+export function previewImportJson(
+  content: string,
+  strategy: ImportStrategy,
+): ImportPreviewResult {
   if (typeof window === "undefined") {
     return {
       ok: false,
@@ -217,16 +242,44 @@ export function importEntriesJson(content: string, strategy: ImportStrategy): Im
   }
 
   const currentEntries = readStore().entries;
+  const currentDates = new Set(currentEntries.map((entry) => entry.date));
+  const duplicateDates = parsed.entries.filter((entry) => currentDates.has(entry.date)).length;
+  const newRecords = parsed.entries.length - duplicateDates;
+  const finalTotal =
+    strategy === "overwrite"
+      ? parsed.entries.length
+      : dedupeEntries([...currentEntries, ...parsed.entries]).length;
+
+  return {
+    ok: true,
+    entries: parsed.entries,
+    strategy,
+    summary: {
+      totalRecords: parsed.entries.length,
+      newRecords,
+      duplicateDates,
+      replacedRecords: strategy === "overwrite" ? currentEntries.length : 0,
+      finalTotal,
+    },
+  };
+}
+
+export function importEntriesJson(content: string, strategy: ImportStrategy): ImportResult {
+  const preview = previewImportJson(content, strategy);
+  if (!preview.ok) {
+    return preview;
+  }
+
   const nextEntries =
     strategy === "overwrite"
-      ? parsed.entries
-      : dedupeEntries([...currentEntries, ...parsed.entries]);
+      ? preview.entries
+      : dedupeEntries([...readStore().entries, ...preview.entries]);
 
   writeStore({ entries: nextEntries });
 
   return {
     ok: true,
-    importedCount: parsed.entries.length,
+    importedCount: preview.entries.length,
     totalCount: nextEntries.length,
     strategy,
   };

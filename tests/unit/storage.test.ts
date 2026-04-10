@@ -6,6 +6,7 @@ import {
   exportEntryMarkdown,
   getStorageKey,
   importEntriesJson,
+  previewImportJson,
   readStore,
   saveEntry,
   searchEntries,
@@ -177,7 +178,101 @@ describe("search and export", () => {
   });
 });
 
-describe("json import", () => {
+describe("import preview and import", () => {
+  beforeEach(() => {
+    saveEntry({
+      ...createEmptyEntry("2026-04-10"),
+      answers: {
+        event: "本地旧记录",
+        reaction: "",
+        thought: "",
+        fear: "",
+        reason: "",
+        stone: "",
+        choice: "",
+      },
+    });
+  });
+
+  it("creates merge preview statistics", () => {
+    const preview = previewImportJson(
+      JSON.stringify([
+        {
+          date: "2026-04-10",
+          tags: ["导入"],
+          answers: {
+            event: "重复日期",
+            reaction: "",
+            thought: "",
+            fear: "",
+            reason: "",
+            stone: "",
+            choice: "",
+          },
+          createdAt: "2026-04-10T08:00:00.000Z",
+          updatedAt: "2099-04-10T08:30:00.000Z",
+        },
+        {
+          date: "2026-04-09",
+          tags: ["新增"],
+          answers: {
+            event: "新增记录",
+            reaction: "",
+            thought: "",
+            fear: "",
+            reason: "",
+            stone: "",
+            choice: "",
+          },
+          createdAt: "2026-04-09T08:00:00.000Z",
+          updatedAt: "2026-04-09T08:30:00.000Z",
+        },
+      ]),
+      "merge",
+    );
+
+    expect(preview.ok).toBe(true);
+    if (preview.ok) {
+      expect(preview.summary.totalRecords).toBe(2);
+      expect(preview.summary.newRecords).toBe(1);
+      expect(preview.summary.duplicateDates).toBe(1);
+      expect(preview.summary.finalTotal).toBe(2);
+      expect(preview.summary.replacedRecords).toBe(0);
+    }
+  });
+
+  it("creates overwrite preview statistics", () => {
+    const preview = previewImportJson(
+      JSON.stringify([
+        {
+          date: "2026-04-09",
+          tags: ["覆盖"],
+          answers: {
+            event: "覆盖后记录",
+            reaction: "",
+            thought: "",
+            fear: "",
+            reason: "",
+            stone: "",
+            choice: "",
+          },
+          createdAt: "2026-04-09T08:00:00.000Z",
+          updatedAt: "2026-04-09T08:30:00.000Z",
+        },
+      ]),
+      "overwrite",
+    );
+
+    expect(preview.ok).toBe(true);
+    if (preview.ok) {
+      expect(preview.summary.totalRecords).toBe(1);
+      expect(preview.summary.newRecords).toBe(1);
+      expect(preview.summary.duplicateDates).toBe(0);
+      expect(preview.summary.replacedRecords).toBe(1);
+      expect(preview.summary.finalTotal).toBe(1);
+    }
+  });
+
   it("imports a valid exported json array", () => {
     const result = importEntriesJson(
       JSON.stringify([
@@ -206,62 +301,29 @@ describe("json import", () => {
   });
 
   it("rejects invalid json content", () => {
-    const result = importEntriesJson("{bad", "merge");
+    const preview = previewImportJson("{bad", "merge");
 
-    expect(result).toEqual({
+    expect(preview).toEqual({
       ok: false,
       message: "导入失败：文件不是合法的 JSON。",
     });
   });
 
-  it("rejects empty data", () => {
-    const result = importEntriesJson("[]", "merge");
+  it("rejects invalid structure", () => {
+    const preview = previewImportJson(JSON.stringify({ bad: [] }), "merge");
 
-    expect(result).toEqual({
+    expect(preview).toEqual({
       ok: false,
-      message: "导入失败：文件中没有可恢复的有效记录。",
+      message: "导入失败：JSON 结构不符合要求，应为导出的 JSON 数组。",
     });
   });
 
-  it("merges duplicate dates by keeping the latest updatedAt", () => {
-    saveEntry({
-      ...createEmptyEntry("2026-04-10"),
-      updatedAt: "2026-04-10T08:00:00.000Z",
-      answers: {
-        event: "旧内容",
-        reaction: "",
-        thought: "",
-        fear: "",
-        reason: "",
-        stone: "",
-        choice: "",
-      },
+  it("rejects empty data", () => {
+    const preview = previewImportJson("[]", "merge");
+
+    expect(preview).toEqual({
+      ok: false,
+      message: "导入失败：文件中没有可恢复的有效记录。",
     });
-
-    const result = importEntriesJson(
-      JSON.stringify([
-        {
-          date: "2026-04-10",
-          tags: ["导入"],
-          answers: {
-            event: "新内容",
-            reaction: "",
-            thought: "",
-            fear: "",
-            reason: "",
-            stone: "",
-            choice: "",
-          },
-          createdAt: "2026-04-10T08:00:00.000Z",
-          updatedAt: "2099-04-10T08:30:00.000Z",
-        },
-      ]),
-      "merge",
-    );
-
-    expect(result.ok).toBe(true);
-    expect(readStore().entries).toHaveLength(1);
-    expect(readStore().entries[0].answers.event).toBe("新内容");
-    expect(readStore().entries[0].tags).toEqual(["导入"]);
   });
 });

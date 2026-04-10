@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   clearAllEntries,
   downloadFile,
@@ -9,22 +9,58 @@ import {
   formatDisplayDate,
   importEntriesJson,
   ImportStrategy,
+  previewImportJson,
+  readStore,
+  restoreEntries,
   searchEntries,
 } from "@/lib/storage";
+import { JournalEntry } from "@/lib/types";
+
+type PendingImport = {
+  content: string;
+  fileName: string;
+  strategy: ImportStrategy;
+  summary: {
+    totalRecords: number;
+    newRecords: number;
+    duplicateDates: number;
+    replacedRecords: number;
+    finalTotal: number;
+  };
+};
 
 export function HistoryList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
   const [keyword, setKeyword] = useState("");
   const [importStrategy, setImportStrategy] = useState<ImportStrategy>("merge");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusError, setStatusError] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [undoEntries, setUndoEntries] = useState<JournalEntry[] | null>(null);
 
   const entries = searchEntries(keyword);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) {
+        window.clearTimeout(undoTimerRef.current);
+      }
+    };
+  }, []);
 
   const updateStatus = (message: string, isError = false) => {
     setStatusMessage(message);
     setStatusError(isError);
+  };
+
+  const clearUndoState = () => {
+    if (undoTimerRef.current) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setUndoEntries(null);
   };
 
   const handleImportClick = () => {
@@ -40,34 +76,67 @@ export function HistoryList() {
     }
 
     if (!file.name.toLowerCase().endsWith(".json")) {
+      setPendingImport(null);
       updateStatus("导入失败：请选择 .json 文件。", true);
       return;
     }
 
     setIsImporting(true);
+    setPendingImport(null);
     setStatusMessage("");
     setStatusError(false);
 
     try {
       const content = await file.text();
-      const result = importEntriesJson(content, importStrategy);
+      const preview = previewImportJson(content, importStrategy);
 
-      if (!result.ok) {
-        updateStatus(result.message, true);
+      if (!preview.ok) {
+        updateStatus(preview.message, true);
         return;
       }
 
-      setKeyword("");
-      updateStatus(
-        result.strategy === "overwrite"
-          ? `导入成功：已覆盖为 ${result.totalCount} 条记录。`
-          : `导入成功：已恢复 ${result.importedCount} 条记录，当前共 ${result.totalCount} 条。`,
-      );
+      setPendingImport({
+        content,
+        fileName: file.name,
+        strategy: importStrategy,
+        summary: preview.summary,
+      });
+      updateStatus("已生成导入预览，请确认后再执行。");
     } catch {
       updateStatus("导入失败：读取文件时出现问题，请稍后再试。", true);
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleConfirmImport = () => {
+    if (!pendingImport) {
+      return;
+    }
+
+    if (
+      pendingImport.strategy === "overwrite" &&
+      typeof window !== "undefined" &&
+      !window.confirm("覆盖模式会替换当前浏览器中的全部记录，是否继续导入？")
+    ) {
+      return;
+    }
+
+    const result = importEntriesJson(pendingImport.content, pendingImport.strategy);
+
+    if (!result.ok) {
+      updateStatus(result.message, true);
+      return;
+    }
+
+    setKeyword("");
+    setPendingImport(null);
+    clearUndoState();
+    updateStatus(
+      result.strategy === "overwrite"
+        ? `导入成功：已覆盖为 ${result.totalCount} 条记录。`
+        : `导入成功：已恢复 ${result.importedCount} 条记录，当前共 ${result.totalCount} 条。`,
+    );
   };
 
   const handleClearAll = () => {
@@ -83,9 +152,30 @@ export function HistoryList() {
       return;
     }
 
+    const snapshot = readStore().entries;
     clearAllEntries();
     setKeyword("");
-    updateStatus("已清空本地记录");
+    setPendingImport(null);
+    setUndoEntries(snapshot);
+    updateStatus("已清空本地记录，可在短时间内撤销。");
+
+    if (undoTimerRef.current) {
+      window.clearTimeout(undoTimerRef.current);
+    }
+    undoTimerRef.current = window.setTimeout(() => {
+      setUndoEntries(null);
+      undoTimerRef.current = null;
+    }, 8000);
+  };
+
+  const handleUndoClear = () => {
+    if (!undoEntries) {
+      return;
+    }
+
+    restoreEntries(undoEntries);
+    clearUndoState();
+    updateStatus("已恢复刚刚清空的记录。");
   };
 
   return (
@@ -109,7 +199,7 @@ export function HistoryList() {
           <div className="rounded-[28px] border border-line/70 bg-white/50 px-4 py-4">
             <p className="text-sm text-ink">导入 JSON</p>
             <p className="mt-2 text-xs leading-6 text-ink/70">
-              可将之前导出的 JSON 文件重新恢复到当前浏览器中。
+              先解析并预览导入内容，确认后才会真正恢复到当前浏览器。
             </p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-ink">
               <label className="flex items-center gap-2">
@@ -148,9 +238,54 @@ export function HistoryList() {
               disabled={isImporting}
               data-testid="import-json-button"
             >
-              {isImporting ? "正在导入…" : "导入 JSON"}
+              {isImporting ? "正在解析…" : "选择 JSON 文件"}
             </button>
           </div>
+
+          {pendingImport ? (
+            <div
+              className="rounded-[28px] border border-line/70 bg-rice/70 px-4 py-4"
+              data-testid="import-preview"
+            >
+              <p className="text-sm text-ink">导入预览</p>
+              <p className="mt-2 text-xs leading-6 text-ink/70">
+                文件：{pendingImport.fileName}
+              </p>
+              <div className="mt-3 grid gap-2 text-sm text-ink">
+                <p>总记录数：{pendingImport.summary.totalRecords}</p>
+                <p>新增数：{pendingImport.summary.newRecords}</p>
+                <p>重复日期数：{pendingImport.summary.duplicateDates}</p>
+                {pendingImport.strategy === "overwrite" ? (
+                  <p>将覆盖数：{pendingImport.summary.replacedRecords}</p>
+                ) : (
+                  <p>将合并后总数：{pendingImport.summary.finalTotal}</p>
+                )}
+              </div>
+              {pendingImport.strategy === "overwrite" ? (
+                <p className="mt-3 text-xs leading-6 text-[#a14f4f]">
+                  覆盖模式会替换当前浏览器中的全部记录，请确认无误后再继续。
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleConfirmImport}
+                  className="soft-button-primary"
+                  data-testid="confirm-import-button"
+                >
+                  确认导入
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingImport(null)}
+                  className="soft-button"
+                  data-testid="cancel-import-button"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <button
             type="button"
@@ -176,9 +311,22 @@ export function HistoryList() {
             清空全部记录
           </button>
 
+          {undoEntries ? (
+            <button
+              type="button"
+              onClick={handleUndoClear}
+              className="soft-button w-full"
+              data-testid="undo-clear-button"
+            >
+              撤销清空
+            </button>
+          ) : null}
+
           {statusMessage ? (
             <p
-              className={`text-xs leading-6 ${statusError ? "text-[#a14f4f]" : "text-pine"}`}
+              className={`rounded-2xl px-3 py-2 text-xs leading-6 ${
+                statusError ? "bg-[#fff3f1] text-[#a14f4f]" : "bg-[#f3f1e8] text-pine"
+              }`}
               data-testid="history-status-message"
             >
               {statusMessage}

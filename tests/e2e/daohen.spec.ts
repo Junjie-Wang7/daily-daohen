@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.setTimeout(60000);
 
-test("user can create, persist, import, and restore a journal entry", async ({ page }, testInfo) => {
+test("user can preview and confirm import before restoring a journal entry", async ({ page }, testInfo) => {
   await page.goto("/");
 
   const dateInput = page.locator('input[type="date"]');
@@ -43,6 +43,13 @@ test("user can create, persist, import, and restore a journal entry", async ({ p
   await page.goto("/history");
   await page.locator('input[value="overwrite"]').check();
   await page.getByTestId("import-json-input").setInputFiles(exportedPath);
+
+  await expect(page.getByTestId("import-preview")).toBeVisible();
+  await expect(page.getByTestId("import-preview")).toContainText("总记录数：1");
+  await expect(page.getByTestId("import-preview")).toContainText("将覆盖数：1");
+
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByTestId("confirm-import-button").click();
   await expect(page.getByTestId("history-status-message")).toContainText("导入成功");
 
   await page.goto(`/records/${currentDate}`);
@@ -76,6 +83,7 @@ test("user can clear all records and create a new one afterward", async ({ page 
   await page.getByTestId("clear-all-button").click();
 
   await expect(page.getByTestId("history-status-message")).toContainText("已清空本地记录");
+  await expect(page.getByTestId("undo-clear-button")).toBeVisible();
   await expect(page.getByTestId("history-empty-state")).toBeVisible();
   await expect(page.locator("article")).toHaveCount(0);
 
