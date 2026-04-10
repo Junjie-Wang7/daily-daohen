@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  min-height: 100%;
+  background: #f3eee6;
+}
+
+body {
+  min-height: 100vh;
+  color: #2d2a26;
+  background:
+    linear-gradient(180deg, rgba(251, 248, 242, 0.85), rgba(245, 241, 234, 0.95)),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(243, 238, 230, 0.82) 50%, rgba(232, 225, 214, 0.9) 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(133, 114, 92, 0.18);
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.paper-grid {
+  background-image:
+    linear-gradient(rgba(133, 114, 92, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(133, 114, 92, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.section-card {
+  @apply rounded-[28px] border border-line/70 bg-rice/80 shadow-quiet backdrop-blur-sm;
+}
+
+.field-shell {
+  @apply rounded-3xl border border-line/80 bg-white/70 px-4 py-3 transition focus-within:border-accent/70 focus-within:bg-white;
+}
+
+.field-input {
+  @apply w-full bg-transparent text-sm leading-7 text-ink outline-none placeholder:text-accent/50;
+}
+
+.soft-button {
+  @apply inline-flex items-center justify-center rounded-full border border-line bg-white/70 px-4 py-2 text-sm text-ink transition hover:border-accent/60 hover:bg-white;
+}
+
+.soft-button-primary {
+  @apply inline-flex items-center justify-center rounded-full border border-accent bg-accent px-4 py-2 text-sm text-white transition hover:bg-[#766550];
+}
