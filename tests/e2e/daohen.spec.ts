@@ -226,3 +226,43 @@ test("user sees a friendly empty state when the current review range has no reco
   await page.getByTestId("review-range-30d").click();
   await expect(page.getByTestId("review-empty-state")).toContainText("最近 30 天还没有记录");
 });
+
+test("user sees a gentle loading state before today's editor appears", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.locator("textarea")).toHaveCount(7);
+});
+
+test("user input is automatically saved and restored after refresh", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("textarea")).toHaveCount(7);
+
+  await page.locator("textarea").nth(0).fill("自动草稿测试");
+  await page.locator("textarea").nth(5).fill("自动保存主石头");
+  await page.locator('input:not([type="date"])').first().fill("工作");
+
+  await expect(page.getByTestId("autosave-status")).toContainText("已自动保存");
+
+  await page.reload();
+  await expect(page.locator("textarea").nth(0)).toHaveValue("自动草稿测试");
+  await expect(page.locator("textarea").nth(5)).toHaveValue("自动保存主石头");
+});
+
+test("mobile editor keeps the main controls easy to reach", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.locator("textarea")).toHaveCount(7);
+
+  const dateInput = page.locator('input[type="date"]');
+  const saveButton = page.getByRole("button", { name: "立即留痕" });
+
+  await expect(dateInput).toBeVisible();
+  await expect(saveButton).toBeVisible();
+
+  const dateBox = await dateInput.boundingBox();
+  const saveBox = await saveButton.boundingBox();
+
+  expect(dateBox?.width ?? 0).toBeGreaterThan(280);
+  expect(saveBox?.height ?? 0).toBeGreaterThan(40);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

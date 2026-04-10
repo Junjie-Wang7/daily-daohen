@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { QUESTIONS } from "@/lib/questions";
 import {
   createEmptyEntry,
@@ -15,11 +15,21 @@ import {
 } from "@/lib/storage";
 import { JournalEntry, QuestionId } from "@/lib/types";
 
+type SaveMode = "auto" | "manual";
+
 function normalizeTags(value: string) {
   return value
     .split(/[,，\s]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function serializeDraft(date: string, tagsInput: string, answers: JournalEntry["answers"]) {
+  return JSON.stringify({
+    date,
+    tags: normalizeTags(tagsInput),
+    answers,
+  });
 }
 
 export function EntryEditor({
@@ -33,14 +43,95 @@ export function EntryEditor({
   const [entry, setEntry] = useState<JournalEntry>(() => createEmptyEntry(date));
   const [tagsInput, setTagsInput] = useState("");
   const [savedAt, setSavedAt] = useState("");
+  const [saveNotice, setSaveNotice] = useState("正在等待第一笔留痕");
+  const [isReady, setIsReady] = useState(false);
   const isToday = date === todayDateString();
+  const autosaveTimerRef = useRef<number | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
+  const lastSavedSignatureRef = useRef("");
+
+  const clearTimers = () => {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = null;
+    }
+  };
+
+  const commitDraft = useCallback(
+    (mode: SaveMode) => {
+      clearTimers();
+
+      const normalizedTags = normalizeTags(tagsInput);
+      const saved = saveEntry({
+        ...entry,
+        date,
+        tags: normalizedTags,
+      });
+      const nextTagsInput = saved.tags.join(" ");
+      const nextSignature = serializeDraft(date, nextTagsInput, saved.answers);
+
+      lastSavedSignatureRef.current = nextSignature;
+      setEntry(saved);
+      setTagsInput(nextTagsInput);
+      setSavedAt(saved.updatedAt);
+      setSaveNotice(mode === "manual" ? "刚刚保存" : "已自动保存");
+
+      if (mode === "manual") {
+        noticeTimerRef.current = window.setTimeout(() => {
+          setSaveNotice("已自动保存");
+          noticeTimerRef.current = null;
+        }, 1800);
+      }
+    },
+    [date, entry, tagsInput],
+  );
 
   useEffect(() => {
+    clearTimers();
+
     const nextEntry = getEntryByDate(date);
+    const nextTagsInput = nextEntry.tags.join(" ");
     setEntry(nextEntry);
-    setTagsInput(nextEntry.tags.join(" "));
+    setTagsInput(nextTagsInput);
     setSavedAt(nextEntry.updatedAt);
+    setSaveNotice("正在等待第一笔留痕");
+    lastSavedSignatureRef.current = serializeDraft(date, nextTagsInput, nextEntry.answers);
+    setIsReady(true);
   }, [date]);
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    const signature = serializeDraft(date, tagsInput, entry.answers);
+    if (signature === lastSavedSignatureRef.current) {
+      return;
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      commitDraft("auto");
+      autosaveTimerRef.current = null;
+    }, 450);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [commitDraft, date, entry.answers, isReady, tagsInput]);
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+    };
+  }, []);
 
   const updateAnswer =
     (questionId: QuestionId) => (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -66,14 +157,7 @@ export function EntryEditor({
   };
 
   const handleSave = () => {
-    const saved = saveEntry({
-      ...entry,
-      date,
-      tags: normalizeTags(tagsInput),
-    });
-    setEntry(saved);
-    setTagsInput(saved.tags.join(" "));
-    setSavedAt(saved.updatedAt);
+    commitDraft("manual");
   };
 
   const handleExportMarkdown = () => {
@@ -87,7 +171,7 @@ export function EntryEditor({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.9fr)]">
+    <div className="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.9fr)] lg:pb-0">
       <section className="section-card">
         <div className="flex flex-col gap-6 px-5 py-6 md:px-8 md:py-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -107,7 +191,7 @@ export function EntryEditor({
               </label>
               {!isToday && allowNavigateHome ? (
                 <Link href="/" className="soft-button sm:mb-[1px]">
-                  回到今日
+                  回到今天
                 </Link>
               ) : null}
             </div>
@@ -125,28 +209,42 @@ export function EntryEditor({
           </div>
 
           <div className="space-y-4">
-            {QUESTIONS.map((question, index) => (
-              <section key={question.id} className="field-shell">
-                <div className="mb-3 flex items-start gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-white/80 text-xs text-accent">
-                    {index + 1}
-                  </span>
-                  <h3 className="pt-1 text-sm leading-7 text-ink">{question.label}</h3>
-                </div>
-                <textarea
-                  value={entry.answers[question.id]}
-                  onChange={updateAnswer(question.id)}
-                  rows={4}
-                  placeholder="写下此刻能看见的一点真实。"
-                  className="field-input min-h-[112px]"
-                />
-              </section>
-            ))}
+            {QUESTIONS.map((question, index) => {
+              const answer = entry.answers[question.id];
+              const hasValue = answer.trim().length > 0;
+
+              return (
+                <section key={question.id} className="field-shell">
+                  <div className="mb-3 flex items-start gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-white/80 text-xs text-accent">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="pt-1 text-sm leading-8 text-ink">{question.label}</h3>
+                    </div>
+                    <span
+                      className={`rounded-full border px-2 py-1 text-[11px] leading-none ${
+                        hasValue ? "border-accent/20 bg-accent/5 text-accent" : "border-line/70 bg-white/70 text-ink/35"
+                      }`}
+                    >
+                      {hasValue ? "已留痕" : "空白"}
+                    </span>
+                  </div>
+                  <textarea
+                    value={answer}
+                    onChange={updateAnswer(question.id)}
+                    rows={5}
+                    placeholder="写下你此刻能看见的真实细节。"
+                    className="field-input min-h-[132px]"
+                  />
+                </section>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <aside className="flex flex-col gap-6">
+      <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
         <section className="section-card">
           <div className="space-y-4 px-5 py-6 md:px-6">
             <div>
@@ -154,13 +252,11 @@ export function EntryEditor({
               <h3 className="mt-2 font-serif text-xl">今日留痕</h3>
             </div>
             <p className="text-sm leading-7 text-ink/70">
-              先写下波澜，再慢慢看见自己。记录会保存在当前浏览器的
-              <code className="mx-1 rounded bg-white/90 px-1.5 py-0.5 text-xs">localStorage</code>
-              中。
+              先写下一笔，再慢慢看见自己。你的内容会安静地留在当前浏览器里，不需要额外的步骤。
             </p>
             <div className="flex flex-col gap-3">
               <button type="button" onClick={handleSave} className="soft-button-primary">
-                保存今日道痕
+                立即留痕
               </button>
               <button type="button" onClick={handleExportMarkdown} className="soft-button">
                 导出本篇 Markdown
@@ -168,6 +264,13 @@ export function EntryEditor({
               <Link href="/history" className="soft-button">
                 查看历史记录
               </Link>
+            </div>
+            <div
+              className="rounded-2xl border border-line/70 bg-white/65 px-3 py-2 text-xs leading-6 text-ink/65"
+              data-testid="autosave-status"
+              aria-live="polite"
+            >
+              {saveNotice}
             </div>
             <p className="text-xs text-accent/75">
               最近保存时间：{savedAt ? new Date(savedAt).toLocaleString("zh-CN") : "尚未保存"}
@@ -182,10 +285,10 @@ export function EntryEditor({
               <h3 className="mt-2 font-serif text-xl">七问之外</h3>
             </div>
             <p className="text-sm leading-7 text-ink/70">
-              不需要把自己说明得很完整。只要比今天早上更诚实一点点，这一笔就有分量。
+              不需要把自己说得很完整。只要比昨天更诚实一点点，这一笔就已经有分量了。
             </p>
             <div className="rounded-3xl border border-dashed border-line px-4 py-4 text-sm leading-7 text-ink/75">
-              今天的“主石头”，不一定是最大的问题，而是最值得继续追问的那一块。
+              今天的“主石头”，不一定是最大的难题，而是最值得继续追问的那一块。
             </div>
           </div>
         </section>

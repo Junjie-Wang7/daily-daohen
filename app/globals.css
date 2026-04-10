@@ -12,7 +12,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   color: #2d2a26;
   background:
     linear-gradient(180deg, rgba(251, 248, 242, 0.85), rgba(245, 241, 234, 0.95)),
@@ -49,17 +49,39 @@ textarea {
 }
 
 .field-shell {
-  @apply rounded-3xl border border-line/80 bg-white/70 px-4 py-3 transition focus-within:border-accent/70 focus-within:bg-white;
+  @apply rounded-3xl border border-line/80 bg-white/70 px-4 py-4 transition focus-within:border-accent/70 focus-within:bg-white md:px-5 md:py-5;
 }
 
 .field-input {
-  @apply w-full bg-transparent text-sm leading-7 text-ink outline-none placeholder:text-accent/50;
+  @apply w-full bg-transparent text-sm leading-8 text-ink outline-none placeholder:text-accent/50;
+  scroll-margin-bottom: 8rem;
 }
 
 .soft-button {
-  @apply inline-flex items-center justify-center rounded-full border border-line bg-white/70 px-4 py-2 text-sm text-ink transition hover:border-accent/60 hover:bg-white;
+  @apply inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white/70 px-5 py-3 text-sm text-ink transition hover:border-accent/60 hover:bg-white;
 }
 
 .soft-button-primary {
-  @apply inline-flex items-center justify-center rounded-full border border-accent bg-accent px-4 py-2 text-sm text-white transition hover:bg-[#766550];
+  @apply inline-flex min-h-11 items-center justify-center rounded-full border border-accent bg-accent px-5 py-3 text-sm text-white transition hover:bg-[#766550];
+}
+
+.loading-sheen {
+  animation: loading-sheen 1.8s ease-in-out infinite;
+}
+
+@keyframes loading-sheen {
+  0% {
+    transform: translateX(-30%);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translateX(130%);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-30%);
+    opacity: 0.35;
+  }
 }
