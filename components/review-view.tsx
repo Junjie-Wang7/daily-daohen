@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { readStore } from "@/lib/storage";
 import {
   filterEntriesByRange,
+  filterEntriesByReview,
   formatRangeLabel,
+  getReviewEmptyMessage,
   getReviewEntrySubtitle,
   getReviewEntryTitle,
   getReviewSummary,
+  ReviewFilter,
   ReviewRange,
 } from "@/lib/review";
 
@@ -18,10 +21,27 @@ function rangeLabel(range: ReviewRange) {
   return formatRangeLabel(range);
 }
 
+function filterLabel(filter: ReviewFilter) {
+  if (filter.tag && filter.stone) {
+    return `标签 #${filter.tag} + 主石头 ${filter.stone}`;
+  }
+
+  if (filter.tag) {
+    return `标签 #${filter.tag}`;
+  }
+
+  if (filter.stone) {
+    return `主石头 ${filter.stone}`;
+  }
+
+  return "";
+}
+
 export function ReviewView() {
   const [mounted, setMounted] = useState(false);
   const [range, setRange] = useState<ReviewRange>("7d");
   const [entries, setEntries] = useState(() => readStore().entries);
+  const [filters, setFilters] = useState<ReviewFilter>({ tag: null, stone: null });
 
   useEffect(() => {
     setMounted(true);
@@ -36,14 +56,24 @@ export function ReviewView() {
     setEntries(readStore().entries);
   }, [mounted, range]);
 
+  const summary = useMemo(() => getReviewSummary(entries, range), [entries, range]);
+  const visibleEntries = useMemo(
+    () => filterEntriesByReview(entries, range, filters),
+    [entries, filters, range],
+  );
+  const hasAnyEntries = entries.length > 0;
+  const hasActiveFilter = Boolean(filters.tag || filters.stone);
+  const filterMessage = hasActiveFilter ? filterLabel(filters) : "";
+  const emptyMessage = hasActiveFilter
+    ? "当前筛选下没有记录。可以清除筛选，或换一个标签 / 主石头再看看。"
+    : getReviewEmptyMessage(range, hasAnyEntries);
+
   if (!mounted) {
     return (
       <div className="section-card px-5 py-10 text-sm leading-7 text-ink/65 md:px-8">正在准备回顾页…</div>
     );
   }
 
-  const summary = getReviewSummary(entries, range);
-  const visibleEntries = filterEntriesByRange(entries, range);
   return (
     <div className="space-y-6">
       <section className="section-card">
@@ -93,11 +123,28 @@ export function ReviewView() {
               <p className="text-xs tracking-[0.2em] text-accent/80">高频标签 Top 5</p>
               <div className="mt-3 space-y-1 text-sm text-ink/75">
                 {summary.topTags.length ? (
-                  summary.topTags.map((item, index) => (
-                    <p key={item.tag}>
-                      {index + 1}. #{item.tag} · {item.count} 次
-                    </p>
-                  ))
+                  summary.topTags.map((item, index) => {
+                    const active = filters.tag === item.tag;
+                    return (
+                      <button
+                        key={item.tag}
+                        type="button"
+                        onClick={() =>
+                          setFilters((current) => ({
+                            ...current,
+                            tag: current.tag === item.tag ? null : item.tag,
+                          }))
+                        }
+                        className={`block w-full rounded-2xl px-2 py-1 text-left transition ${
+                          active ? "bg-rice text-ink" : "hover:bg-white/70"
+                        }`}
+                        aria-pressed={active}
+                        data-testid={`review-tag-filter-${index}`}
+                      >
+                        {index + 1}. #{item.tag} · {item.count} 次
+                      </button>
+                    );
+                  })
                 ) : (
                   <p>暂无标签</p>
                 )}
@@ -107,11 +154,28 @@ export function ReviewView() {
               <p className="text-xs tracking-[0.2em] text-accent/80">主石头汇总</p>
               <div className="mt-3 space-y-2 text-sm text-ink/75">
                 {summary.topStones.length ? (
-                  summary.topStones.map((item, index) => (
-                    <p key={item.stone}>
-                      {index + 1}. {item.stone} · {item.count} 次
-                    </p>
-                  ))
+                  summary.topStones.map((item, index) => {
+                    const active = filters.stone === item.stone;
+                    return (
+                      <button
+                        key={item.stone}
+                        type="button"
+                        onClick={() =>
+                          setFilters((current) => ({
+                            ...current,
+                            stone: current.stone === item.stone ? null : item.stone,
+                          }))
+                        }
+                        className={`block w-full rounded-2xl px-2 py-1 text-left transition ${
+                          active ? "bg-rice text-ink" : "hover:bg-white/70"
+                        }`}
+                        aria-pressed={active}
+                        data-testid={`review-stone-filter-${index}`}
+                      >
+                        {index + 1}. {item.stone} · {item.count} 次
+                      </button>
+                    );
+                  })
                 ) : (
                   <p>暂无主石头</p>
                 )}
@@ -119,9 +183,20 @@ export function ReviewView() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-line/70 bg-white/60 px-4 py-3 text-xs leading-6 text-ink/70">
-            当前范围：{rangeLabel(range)}
-            {range === "all" ? "，显示全部历史记录。" : `，共 ${summary.recordCount} 条记录。`}
+          <div className="flex flex-wrap items-center gap-2 rounded-[28px] border border-line/70 bg-white/60 px-4 py-3 text-xs leading-6 text-ink/70">
+            <span>当前范围：{rangeLabel(range)}</span>
+            {range === "all" ? <span>，显示全部历史记录。</span> : <span>，共 {summary.recordCount} 条记录。</span>}
+            {hasActiveFilter ? <span>当前筛选：{filterMessage}</span> : null}
+            {hasActiveFilter ? (
+              <button
+                type="button"
+                onClick={() => setFilters({ tag: null, stone: null })}
+                className="soft-button py-1 text-xs"
+                data-testid="review-clear-filter"
+              >
+                清除筛选
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -141,7 +216,7 @@ export function ReviewView() {
               className="rounded-[28px] border border-dashed border-line px-5 py-10 text-center text-sm leading-7 text-ink/65"
               data-testid="review-empty-state"
             >
-              当前范围内还没有记录。可以切换范围，或者先写下今天的道痕。
+              {emptyMessage}
             </div>
           ) : (
             <div className="grid gap-3" data-testid="review-list">

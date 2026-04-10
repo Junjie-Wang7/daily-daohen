@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { filterEntriesByRange, getReviewSummary, getTopStones } from "@/lib/review";
+import {
+  filterEntriesByRange,
+  filterEntriesByReview,
+  getReviewEmptyMessage,
+  getReviewSummary,
+  getTopStones,
+} from "@/lib/review";
 import { createEmptyEntry } from "@/lib/storage";
 
 function makeEntry(date: string, stone: string, tags: string[] = []) {
@@ -36,17 +42,36 @@ describe("review helpers", () => {
     expect(filterEntriesByRange(entries, "all", referenceDate)).toHaveLength(3);
   });
 
-  it("counts top stones and ignores blank stones", () => {
+  it("filters entries by review chips", () => {
+    const entries = [
+      makeEntry("2026-04-10", "先暂停", ["工作", "复盘"]),
+      makeEntry("2026-04-09", "先暂停", ["工作"]),
+      makeEntry("2026-04-08", "先确认", ["关系"]),
+    ];
+
+    expect(
+      filterEntriesByReview(entries, "all", { tag: "工作", stone: null }, referenceDate),
+    ).toHaveLength(2);
+    expect(
+      filterEntriesByReview(entries, "all", { tag: null, stone: "先暂停" }, referenceDate),
+    ).toHaveLength(2);
+    expect(
+      filterEntriesByReview(entries, "all", { tag: "关系", stone: "先暂停" }, referenceDate),
+    ).toHaveLength(0);
+  });
+
+  it("counts representative top stones and ignores blank stones", () => {
     const entries = [
       makeEntry("2026-04-10", "先暂停"),
       makeEntry("2026-04-09", "先暂停"),
       makeEntry("2026-04-08", "先确认"),
-      makeEntry("2026-04-07", " "),
+      makeEntry("2026-04-07", "先确认"),
+      makeEntry("2026-04-06", " "),
     ];
 
     expect(getTopStones(entries)).toEqual([
       { stone: "先暂停", count: 2 },
-      { stone: "先确认", count: 1 },
+      { stone: "先确认", count: 2 },
     ]);
   });
 
@@ -64,5 +89,11 @@ describe("review helpers", () => {
     expect(summary.recentStreak).toBe(2);
     expect(summary.topTags[0]).toEqual({ tag: "工作", count: 3 });
     expect(summary.topStones[0]).toEqual({ stone: "先暂停", count: 2 });
+  });
+
+  it("shows friendlier empty messages", () => {
+    expect(getReviewEmptyMessage("7d", true)).toContain("最近 7 天");
+    expect(getReviewEmptyMessage("30d", true)).toContain("最近 30 天");
+    expect(getReviewEmptyMessage("all", false)).toContain("还没有任何记录");
   });
 });

@@ -121,7 +121,7 @@ test("user can open the calendar and navigate to a record day", async ({ page })
   await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
 });
 
-test("user can review records by range and open a record from the review page", async ({ page }) => {
+test("user can filter review entries by tag and stone, then clear the filter", async ({ page }) => {
   await page.goto("/");
   const currentDate = await page.locator('input[type="date"]').inputValue();
 
@@ -144,14 +144,14 @@ test("user can review records by range and open a record from the review page", 
     {
       date: shiftDate(currentDate, -2),
       title: "回顾主石头二",
-      stone: "先确认",
+      stone: "先暂停",
       tags: "工作",
     },
     {
-      date: shiftDate(currentDate, -12),
-      title: "更早的一条记录",
+      date: shiftDate(currentDate, -4),
+      title: "回顾主石头三",
       stone: "先观察",
-      tags: "关系",
+      tags: "工作",
     },
   ];
 
@@ -166,14 +166,50 @@ test("user can review records by range and open a record from the review page", 
   await page.getByRole("link", { name: "回顾" }).click();
   await expect(page).toHaveURL(/\/review$/);
   await expect(page.getByTestId("review-range-7d")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(2);
-
-  await page.getByTestId("review-range-30d").click();
-  await expect(page.getByTestId("review-range-30d")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
-  await expect(page.getByTestId("review-streak-detail")).toContainText("连续记录");
+
+  await page.getByTestId("review-tag-filter-1").click();
+  await expect(page.getByTestId("review-tag-filter-1")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(1);
+
+  await page.getByTestId("review-clear-filter").click();
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
+
+  await page.getByTestId("review-stone-filter-1").click();
+  await expect(page.getByTestId("review-stone-filter-1")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(1);
+
+  await page.getByTestId("review-clear-filter").click();
+  await page.getByTestId("review-range-30d").click();
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
 
   await page.getByTestId(`review-item-${currentDate}`).click();
   await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
   await expect(page.locator("textarea").nth(0)).toHaveValue("回顾主石头一");
+});
+
+test("user sees a friendly empty state when the current review range has no records", async ({ page }) => {
+  await page.goto("/");
+  const currentDate = await page.locator('input[type="date"]').inputValue();
+
+  const oldDate = (() => {
+    const date = new Date(`${currentDate}T00:00:00`);
+    date.setDate(date.getDate() - 40);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  })();
+
+  await page.goto(`/records/${oldDate}`);
+  await page.locator("textarea").nth(0).fill("四十天前的记录");
+  await page.locator("textarea").nth(5).fill("旧主石头");
+  await page.locator("button").first().click();
+
+  await page.getByRole("link", { name: "回顾" }).click();
+  await expect(page).toHaveURL(/\/review$/);
+  await expect(page.getByTestId("review-empty-state")).toContainText("最近 7 天还没有记录");
+
+  await page.getByTestId("review-range-30d").click();
+  await expect(page.getByTestId("review-empty-state")).toContainText("最近 30 天还没有记录");
 });
