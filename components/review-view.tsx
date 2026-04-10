@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { readStore } from "@/lib/storage";
 import {
-  filterEntriesByRange,
   filterEntriesByReview,
   formatRangeLabel,
   getReviewEmptyMessage,
@@ -22,26 +21,28 @@ function rangeLabel(range: ReviewRange) {
 }
 
 function filterLabel(filter: ReviewFilter) {
-  if (filter.tag && filter.stone) {
-    return `标签 #${filter.tag} + 主石头 ${filter.stone}`;
+  const labels: string[] = [];
+
+  if (filter.keyword) {
+    labels.push(`关键词 #${filter.keyword}`);
   }
 
   if (filter.tag) {
-    return `标签 #${filter.tag}`;
+    labels.push(`标签 #${filter.tag}`);
   }
 
   if (filter.stone) {
-    return `主石头 ${filter.stone}`;
+    labels.push(`主石头 ${filter.stone}`);
   }
 
-  return "";
+  return labels.join("，");
 }
 
 export function ReviewView() {
   const [mounted, setMounted] = useState(false);
   const [range, setRange] = useState<ReviewRange>("7d");
   const [entries, setEntries] = useState(() => readStore().entries);
-  const [filters, setFilters] = useState<ReviewFilter>({ tag: null, stone: null });
+  const [filters, setFilters] = useState<ReviewFilter>({ tag: null, stone: null, keyword: null });
 
   useEffect(() => {
     setMounted(true);
@@ -62,10 +63,10 @@ export function ReviewView() {
     [entries, filters, range],
   );
   const hasAnyEntries = entries.length > 0;
-  const hasActiveFilter = Boolean(filters.tag || filters.stone);
+  const hasActiveFilter = Boolean(filters.tag || filters.stone || filters.keyword);
   const filterMessage = hasActiveFilter ? filterLabel(filters) : "";
   const emptyMessage = hasActiveFilter
-    ? "当前筛选下没有记录。可以清除筛选，或换一个标签 / 主石头再看看。"
+    ? "当前筛选下没有记录。可以清除筛选，或换一个关键词 / 标签 / 主石头再看看。"
     : getReviewEmptyMessage(range, hasAnyEntries);
 
   if (!mounted) {
@@ -105,7 +106,7 @@ export function ReviewView() {
             </div>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-4">
+          <div className="grid gap-3 xl:grid-cols-5">
             <div className="rounded-[28px] border border-line/70 bg-white/60 px-4 py-4">
               <p className="text-xs tracking-[0.2em] text-accent/80">记录总数</p>
               <p className="mt-2 font-serif text-3xl text-ink">{summary.recordCount}</p>
@@ -181,6 +182,37 @@ export function ReviewView() {
                 )}
               </div>
             </div>
+            <div className="rounded-[28px] border border-line/70 bg-white/60 px-4 py-4">
+              <p className="text-xs tracking-[0.2em] text-accent/80">关键词 Top 6</p>
+              <div className="mt-3 space-y-1 text-sm text-ink/75">
+                {summary.topKeywords.length ? (
+                  summary.topKeywords.map((item, index) => {
+                    const active = filters.keyword === item.keyword;
+                    return (
+                      <button
+                        key={item.keyword}
+                        type="button"
+                        onClick={() =>
+                          setFilters((current) => ({
+                            ...current,
+                            keyword: current.keyword === item.keyword ? null : item.keyword,
+                          }))
+                        }
+                        className={`block w-full rounded-2xl px-2 py-1 text-left transition ${
+                          active ? "bg-rice text-ink" : "hover:bg-white/70"
+                        }`}
+                        aria-pressed={active}
+                        data-testid={`review-keyword-filter-${index}`}
+                      >
+                        {index + 1}. {item.keyword} · {item.count} 次
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p>暂无关键词</p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-[28px] border border-line/70 bg-white/60 px-4 py-3 text-xs leading-6 text-ink/70">
@@ -190,7 +222,7 @@ export function ReviewView() {
             {hasActiveFilter ? (
               <button
                 type="button"
-                onClick={() => setFilters({ tag: null, stone: null })}
+                onClick={() => setFilters({ tag: null, stone: null, keyword: null })}
                 className="soft-button py-1 text-xs"
                 data-testid="review-clear-filter"
               >

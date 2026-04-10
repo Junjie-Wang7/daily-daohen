@@ -121,7 +121,7 @@ test("user can open the calendar and navigate to a record day", async ({ page })
   await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
 });
 
-test("user can filter review entries by tag and stone, then clear the filter", async ({ page }) => {
+test("user can filter review entries by keyword, tag and stone, then clear the filter", async ({ page }) => {
   await page.goto("/");
   const currentDate = await page.locator('input[type="date"]').inputValue();
 
@@ -140,24 +140,35 @@ test("user can filter review entries by tag and stone, then clear the filter", a
       title: "回顾主石头一",
       stone: "先暂停",
       tags: "工作, 复盘",
+      event: "我先想解释自己。",
+      thought: "其实我担心被误解。",
+      fear: "我害怕关系变得紧张。",
     },
     {
       date: shiftDate(currentDate, -2),
       title: "回顾主石头二",
       stone: "先暂停",
       tags: "工作",
+      event: "我先整理事实。",
+      thought: "先确认事实。",
+      fear: "我在等一个更清楚的说法。",
     },
     {
       date: shiftDate(currentDate, -4),
       title: "回顾主石头三",
       stone: "先观察",
       tags: "工作",
+      event: "先确认事实。",
+      thought: "关系变得紧张。",
+      fear: "我先梳理思路。",
     },
   ];
 
   for (const record of records) {
     await page.goto(`/records/${record.date}`);
-    await page.locator("textarea").nth(0).fill(record.title);
+    await page.locator("textarea").nth(0).fill(record.event);
+    await page.locator("textarea").nth(2).fill(record.thought);
+    await page.locator("textarea").nth(3).fill(record.fear);
     await page.locator("textarea").nth(5).fill(record.stone);
     await page.locator('input:not([type="date"])').first().fill(record.tags);
     await page.locator("button").first().click();
@@ -168,15 +179,17 @@ test("user can filter review entries by tag and stone, then clear the filter", a
   await expect(page.getByTestId("review-range-7d")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
 
-  await page.getByTestId("review-tag-filter-1").click();
-  await expect(page.getByTestId("review-tag-filter-1")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(1);
+  await page.getByTestId("review-keyword-filter-0").click();
+  await expect(page.getByTestId("review-keyword-filter-0")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(2);
 
   await page.getByTestId("review-clear-filter").click();
   await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
 
+  await page.getByTestId("review-tag-filter-0").click();
+  await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
+
   await page.getByTestId("review-stone-filter-1").click();
-  await expect(page.getByTestId("review-stone-filter-1")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("review-list").locator("a")).toHaveCount(1);
 
   await page.getByTestId("review-clear-filter").click();
@@ -185,7 +198,7 @@ test("user can filter review entries by tag and stone, then clear the filter", a
 
   await page.getByTestId(`review-item-${currentDate}`).click();
   await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
-  await expect(page.locator("textarea").nth(0)).toHaveValue("回顾主石头一");
+  await expect(page.locator("textarea").nth(0)).toHaveValue("我先想解释自己。");
 });
 
 test("user sees a friendly empty state when the current review range has no records", async ({ page }) => {
