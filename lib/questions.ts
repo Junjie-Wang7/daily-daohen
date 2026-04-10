@@ -1,6 +1,6 @@
-import { Question } from "@/lib/types";
+import { JournalEntry, QuestionId } from "@/lib/types";
 
-export const QUESTIONS: Question[] = [
+export const QUESTIONS: Array<{ id: QuestionId; label: string }> = [
   { id: "event", label: "今天最起波澜的一件事是什么？（只写发生了什么）" },
   { id: "reaction", label: "当时我的第一反应是什么？（直接感受）" },
   { id: "thought", label: "我其实想得到什么？（找出贪婪）" },
@@ -9,3 +9,9 @@ export const QUESTIONS: Question[] = [
   { id: "stone", label: "今天捞出来的主石头是什么？（只写一句定论）" },
   { id: "choice", label: "如果明天再遇到同样的事情，我准备怎么选择？" },
 ];
+
+export function countAnsweredQuestions(answers: JournalEntry["answers"]) {
+  return QUESTIONS.reduce((count, question) => {
+    return answers[question.id].trim() ? count + 1 : count;
+  }, 0);
+}

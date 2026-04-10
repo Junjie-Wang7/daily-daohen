@@ -117,7 +117,7 @@ export function CalendarView() {
                     </p>
                   ))
                 ) : (
-                  <p>本月暂无标签</p>
+                  <p>本月还没有标签</p>
                 )}
               </div>
             </div>
@@ -197,7 +197,7 @@ export function CalendarView() {
                           : "border-line/70 bg-white/70 text-ink/50"
                       }`}
                     >
-                      {selectedPreview.hasRecord ? "有记录" : "暂无记录"}
+                      {selectedPreview.hasRecord ? "有记录" : "未留痕"}
                     </span>
                   </div>
 

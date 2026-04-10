@@ -3,20 +3,56 @@
 @tailwind utilities;
 
 :root {
+  --background: 243 238 230;
+  --surface: 251 248 242;
+  --mist: 245 241 234;
+  --rice: 251 248 242;
+  --line: 217 209 196;
+  --accent: 133 114 92;
+  --pine: 94 102 81;
+  --ink: 45 42 38;
   color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --background: 19 16 13;
+  --surface: 33 29 26;
+  --mist: 38 33 29;
+  --rice: 43 37 33;
+  --line: 75 67 59;
+  --accent: 192 168 137;
+  --pine: 161 170 143;
+  --ink: 232 225 217;
+  color-scheme: dark;
 }
 
 html {
   min-height: 100%;
-  background: #f3eee6;
+  background: rgb(var(--background) / 1);
 }
 
 body {
   min-height: 100dvh;
-  color: #2d2a26;
+  color: rgb(var(--ink) / 1);
   background:
-    linear-gradient(180deg, rgba(251, 248, 242, 0.85), rgba(245, 241, 234, 0.95)),
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(243, 238, 230, 0.82) 50%, rgba(232, 225, 214, 0.9) 100%);
+    linear-gradient(180deg, rgb(var(--surface) / 0.88), rgb(var(--mist) / 0.95)),
+    radial-gradient(
+      circle at top,
+      rgb(255 255 255 / 0.95),
+      rgb(var(--background) / 0.82) 50%,
+      rgb(232 225 214 / 0.92) 100%
+    );
+}
+
+[data-theme="dark"] body {
+  background:
+    linear-gradient(180deg, rgb(var(--surface) / 0.96), rgb(var(--mist) / 0.98)),
+    radial-gradient(
+      circle at top,
+      rgb(62 55 49 / 0.9),
+      rgb(var(--background) / 0.96) 55%,
+      rgb(15 13 11 / 1) 100%
+    );
 }
 
 * {
@@ -39,8 +75,8 @@ textarea {
 
 .paper-grid {
   background-image:
-    linear-gradient(rgba(133, 114, 92, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(133, 114, 92, 0.05) 1px, transparent 1px);
+    linear-gradient(rgb(var(--accent) / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--accent) / 0.05) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -62,11 +98,38 @@ textarea {
 }
 
 .soft-button-primary {
-  @apply inline-flex min-h-11 items-center justify-center rounded-full border border-accent bg-accent px-5 py-3 text-sm text-white transition hover:bg-[#766550];
+  @apply inline-flex min-h-11 items-center justify-center rounded-full border border-accent bg-accent px-5 py-3 text-sm text-white transition hover:bg-accent/90;
 }
 
 .loading-sheen {
   animation: loading-sheen 1.8s ease-in-out infinite;
+}
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-white\/50,
+[data-theme="dark"] .bg-white\/55,
+[data-theme="dark"] .bg-white\/60,
+[data-theme="dark"] .bg-white\/65,
+[data-theme="dark"] .bg-white\/70,
+[data-theme="dark"] .bg-white\/80,
+[data-theme="dark"] .bg-white\/90 {
+  background-color: rgb(var(--surface) / 0.92) !important;
+}
+
+[data-theme="dark"] .bg-rice,
+[data-theme="dark"] .bg-rice\/50,
+[data-theme="dark"] .bg-rice\/55,
+[data-theme="dark"] .bg-rice\/60,
+[data-theme="dark"] .bg-rice\/65,
+[data-theme="dark"] .bg-rice\/70,
+[data-theme="dark"] .bg-rice\/80 {
+  background-color: rgb(var(--rice) / 0.92) !important;
+}
+
+[data-theme="dark"] .border-line,
+[data-theme="dark"] .border-line\/70,
+[data-theme="dark"] .border-line\/80 {
+  border-color: rgb(var(--line) / 0.92) !important;
 }
 
 @keyframes loading-sheen {

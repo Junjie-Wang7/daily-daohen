@@ -256,10 +256,10 @@ test("user sees a friendly empty state when the current review range has no reco
 
   await page.getByRole("link", { name: "回顾" }).click();
   await expect(page).toHaveURL(/\/review$/);
-  await expect(page.getByTestId("review-empty-state")).toContainText("最近 7 天还没有记录");
+  await expect(page.getByTestId("review-empty-state")).toContainText("最近 7 天还没有留下痕迹");
 
   await page.getByTestId("review-range-30d").click();
-  await expect(page.getByTestId("review-empty-state")).toContainText("最近 30 天还没有记录");
+  await expect(page.getByTestId("review-empty-state")).toContainText("最近 30 天还没有留下痕迹");
 });
 
 test("user sees a gentle loading state before today's editor appears", async ({ page }) => {
@@ -274,11 +274,28 @@ test("user can open and close the lightweight introduction on the home page", as
 
   await page.getByTestId("home-intro-toggle").click();
   await expect(page.getByTestId("home-intro-panel")).toBeVisible();
-  await expect(page.getByTestId("home-intro-panel")).toContainText("道痕，是你一天里真正发生过");
+  await expect(page.getByTestId("home-intro-panel")).toContainText("道痕，是事情经过你之后");
 
   await page.getByTestId("home-intro-close").click();
   await expect(page.getByTestId("home-intro-toggle")).toBeVisible();
   await expect(page.locator("textarea")).toHaveCount(7);
+});
+
+test("user can switch to dark mode and keep it after refresh", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("theme-toggle")).toBeVisible();
+
+  await page.getByTestId("theme-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.goto("/calendar");
+  await expect(page.getByTestId("calendar-preview")).toBeVisible();
+
+  await page.goto("/review");
+  await expect(page.getByTestId("review-range-7d")).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
 test("user input is automatically saved and restored after refresh", async ({ page }) => {

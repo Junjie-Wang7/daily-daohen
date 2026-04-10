@@ -49,6 +49,10 @@ export function HistoryList() {
   const [undoEntries, setUndoEntries] = useState<JournalEntry[] | null>(null);
 
   const entries = searchEntries(keyword);
+  const hasKeyword = keyword.trim().length > 0;
+  const emptyMessage = hasKeyword
+    ? "暂时没有找到匹配记录。可以换一个关键词，或先回到首页留下今天这一笔。"
+    : "这里还没有留下道痕。先回到今天，写下第一笔，再慢慢回来回看。";
 
   useEffect(() => {
     return () => {
@@ -301,7 +305,7 @@ export function HistoryList() {
                 </div>
               ) : null}
               {pendingImport.strategy === "overwrite" ? (
-                <p className="mt-3 text-xs leading-6 text-[#a14f4f]">
+                <p className="mt-3 text-xs leading-6 text-accent/80">
                   覆盖模式会替换当前浏览器中的全部记录，请确认无误后再继续。
                 </p>
               ) : null}
@@ -364,7 +368,7 @@ export function HistoryList() {
           {statusMessage ? (
             <p
               className={`rounded-2xl px-3 py-2 text-xs leading-6 ${
-                statusError ? "bg-[#fff3f1] text-[#a14f4f]" : "bg-[#f3f1e8] text-pine"
+                statusError ? "bg-mist/80 text-accent" : "bg-rice/80 text-pine"
               }`}
               data-testid="history-status-message"
             >
@@ -385,7 +389,7 @@ export function HistoryList() {
               className="rounded-[28px] border border-dashed border-line px-5 py-10 text-center text-sm leading-7 text-ink/65"
               data-testid="history-empty-state"
             >
-              暂时没有找到匹配记录。可以换一个关键词，或先回到首页留下今天这一笔。
+              {emptyMessage}
             </div>
           ) : (
             entries.map((entry) => (

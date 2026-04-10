@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
-import { QUESTIONS } from "@/lib/questions";
+import { QUESTIONS, countAnsweredQuestions } from "@/lib/questions";
 import {
   createEmptyEntry,
   downloadFile,
@@ -46,6 +46,7 @@ export function EntryEditor({
   const [saveNotice, setSaveNotice] = useState("正在等待第一笔留痕");
   const [isReady, setIsReady] = useState(false);
   const isToday = date === todayDateString();
+  const answeredCount = countAnsweredQuestions(entry.answers);
   const autosaveTimerRef = useRef<number | null>(null);
   const noticeTimerRef = useRef<number | null>(null);
   const lastSavedSignatureRef = useRef("");
@@ -209,6 +210,15 @@ export function EntryEditor({
           </div>
 
           <div className="space-y-4">
+            <div className="flex items-center gap-3 text-xs leading-6 text-ink/55" data-testid="question-progress">
+              <span>已回应 {answeredCount} / {QUESTIONS.length}</span>
+              <div className="h-px flex-1 overflow-hidden rounded-full bg-line/50">
+                <div
+                  className="h-px rounded-full bg-accent/70 transition-all"
+                  style={{ width: `${(answeredCount / QUESTIONS.length) * 100}%` }}
+                />
+              </div>
+            </div>
             {QUESTIONS.map((question, index) => {
               const answer = entry.answers[question.id];
               const hasValue = answer.trim().length > 0;

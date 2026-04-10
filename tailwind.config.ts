@@ -9,12 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#2d2a26",
-        mist: "#f5f1ea",
-        rice: "#fbf8f2",
-        line: "#d9d1c4",
-        accent: "#85725c",
-        pine: "#5e6651",
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        mist: "rgb(var(--mist) / <alpha-value>)",
+        rice: "rgb(var(--rice) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)",
+        accent: "rgb(var(--accent) / <alpha-value>)",
+        pine: "rgb(var(--pine) / <alpha-value>)",
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        background: "rgb(var(--background) / <alpha-value>)",
       },
       boxShadow: {
         quiet: "0 18px 40px rgba(86, 73, 53, 0.08)",

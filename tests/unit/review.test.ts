@@ -138,6 +138,6 @@ describe("review helpers", () => {
   it("shows friendlier empty messages", () => {
     expect(getReviewEmptyMessage("7d", true)).toContain("最近 7 天");
     expect(getReviewEmptyMessage("30d", true)).toContain("最近 30 天");
-    expect(getReviewEmptyMessage("all", false)).toContain("还没有任何记录");
+    expect(getReviewEmptyMessage("all", false)).toContain("还没有留下道痕");
   });
 });

@@ -13,7 +13,7 @@ export function HomeIntro() {
             type="button"
             onClick={() => setOpen(true)}
             className="flex w-full items-center justify-between gap-4 rounded-[24px] border border-dashed border-line/70 bg-white/55 px-4 py-4 text-left transition hover:border-accent/50 hover:bg-white"
-            aria-expanded="false"
+            aria-expanded={open}
             data-testid="home-intro-toggle"
           >
             <div className="space-y-1">
@@ -36,9 +36,9 @@ export function HomeIntro() {
             </div>
 
             <div className="space-y-3 text-sm leading-7 text-ink/75">
-              <p>道痕，是你一天里真正发生过、真正感受过、真正选择过的痕迹。</p>
-              <p>七问不是为了写得漂亮，而是帮你把波澜、反应、恐惧和选择慢慢看清。</p>
-              <p>这里默认只保存在当前浏览器里，像一个只属于你的安静角落。</p>
+              <p>道痕，是事情经过你之后，在你心里留下的痕。</p>
+              <p>它不是流水账，也不只是情绪；你为什么起波澜、真正想得到什么、真正害怕什么、又是怎么说服自己的，这些都会慢慢显出来。</p>
+              <p>每天捞出一点，不是为了评判自己，而是为了慢慢看见自己。你的记录默认只保存在当前浏览器中。</p>
             </div>
           </div>
         )}

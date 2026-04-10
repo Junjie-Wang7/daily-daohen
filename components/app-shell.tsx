@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
   { href: "/", label: "今日道痕" },
@@ -40,21 +41,24 @@ export function AppShell({
                   <span>这里是只属于你的安静角落。</span>
                 </div>
               </div>
-              <nav className="flex flex-wrap gap-2">
-                {links.map((link) => {
-                  const active = pathname === link.href;
+              <div className="flex flex-wrap items-center gap-2">
+                <nav className="flex flex-wrap gap-2">
+                  {links.map((link) => {
+                    const active = pathname === link.href;
 
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={active ? "soft-button-primary" : "soft-button"}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </nav>
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={active ? "soft-button-primary" : "soft-button"}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         </header>

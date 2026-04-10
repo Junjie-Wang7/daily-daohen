@@ -330,7 +330,7 @@ export function getReviewEntryTitle(entry: JournalEntry) {
 
 export function getReviewEntrySubtitle(entry: JournalEntry) {
   const tags = entry.tags.map((tag) => `#${tag}`).join(" ");
-  return tags || "暂无标签";
+  return tags || "尚未留下标签";
 }
 
 export function getReviewAnchorDate(entry: JournalEntry) {
@@ -339,16 +339,16 @@ export function getReviewAnchorDate(entry: JournalEntry) {
 
 export function getReviewEmptyMessage(range: ReviewRange, hasEntries: boolean) {
   if (!hasEntries) {
-    return "还没有任何记录。先从今天开始写下第一条道痕吧。";
+    return "这里还没有留下道痕。先从今天开始写下第一笔，再慢慢回来看见它们。";
   }
 
   if (range === "7d") {
-    return "最近 7 天还没有记录。可以先写今天，或者切换到最近 30 天看看。";
+    return "最近 7 天还没有留下痕迹。可以先写今天，或者切换到最近 30 天看看。";
   }
 
   if (range === "30d") {
-    return "最近 30 天还没有记录。可以先写今天，或者切换到“全部”看看更早的内容。";
+    return "最近 30 天还没有留下痕迹。可以先写今天，或者切换到“全部”看看更早的内容。";
   }
 
-  return "当前范围内没有可显示的记录。可以切换时间范围，或者先写下今天的道痕。";
+  return "当前范围内还没有可显示的记录。可以切换时间范围，或者先写下今天的道痕。";
 }
