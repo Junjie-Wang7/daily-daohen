@@ -195,6 +195,14 @@ export function writeStore(store: JournalStore) {
   );
 }
 
+export function clearAllEntries() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries: [] }));
+}
+
 export function importEntriesJson(content: string, strategy: ImportStrategy): ImportResult {
   if (typeof window === "undefined") {
     return {

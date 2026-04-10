@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearAllEntries,
   createEmptyEntry,
   exportAllEntriesJson,
   exportEntryMarkdown,
@@ -113,6 +114,26 @@ describe("storage helpers", () => {
     expect(saved.tags).toEqual(["工作", "关系"]);
     expect(saved.answers.event).toBe("今天起了波澜");
     expect(saved.answers.fear).toBe("");
+  });
+
+  it("clears all entries while preserving the storage shape", () => {
+    saveEntry({
+      ...createEmptyEntry("2026-04-10"),
+      answers: {
+        event: "需要被清空",
+        reaction: "",
+        thought: "",
+        fear: "",
+        reason: "",
+        stone: "",
+        choice: "",
+      },
+    });
+
+    clearAllEntries();
+
+    expect(readStore()).toEqual({ entries: [] });
+    expect(window.localStorage.getItem(getStorageKey())).toBe(JSON.stringify({ entries: [] }));
   });
 });
 

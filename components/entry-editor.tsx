@@ -95,14 +95,14 @@ export function EntryEditor({
               <p className="text-xs tracking-[0.3em] text-accent/80">DATE</p>
               <h2 className="font-serif text-2xl">{formatDisplayDate(date)}</h2>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-              <label className="flex min-w-[200px] flex-col gap-2 text-sm text-ink">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex w-full flex-col gap-2 text-sm text-ink sm:w-auto sm:min-w-[220px]">
                 <span className="text-xs tracking-[0.2em] text-accent/80">切换日期</span>
                 <input
                   type="date"
                   value={date}
                   onChange={handleDateChange}
-                  className="rounded-full border border-line bg-white/80 px-4 py-2 text-sm text-ink outline-none transition focus:border-accent/70 focus:bg-white"
+                  className="min-h-11 w-full rounded-full border border-line bg-white/80 px-4 py-2 text-sm text-ink outline-none transition focus:border-accent/70 focus:bg-white sm:w-[220px]"
                 />
               </label>
               {!isToday && allowNavigateHome ? (

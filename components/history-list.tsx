@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, useRef, useState } from "react";
 import {
+  clearAllEntries,
   downloadFile,
   exportAllEntriesJson,
   formatDisplayDate,
@@ -15,11 +16,16 @@ export function HistoryList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [keyword, setKeyword] = useState("");
   const [importStrategy, setImportStrategy] = useState<ImportStrategy>("merge");
-  const [importMessage, setImportMessage] = useState("");
-  const [importError, setImportError] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusError, setStatusError] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   const entries = searchEntries(keyword);
+
+  const updateStatus = (message: string, isError = false) => {
+    setStatusMessage(message);
+    setStatusError(isError);
+  };
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -34,38 +40,52 @@ export function HistoryList() {
     }
 
     if (!file.name.toLowerCase().endsWith(".json")) {
-      setImportError(true);
-      setImportMessage("导入失败：请选择 .json 文件。");
+      updateStatus("导入失败：请选择 .json 文件。", true);
       return;
     }
 
     setIsImporting(true);
-    setImportMessage("");
-    setImportError(false);
+    setStatusMessage("");
+    setStatusError(false);
 
     try {
       const content = await file.text();
       const result = importEntriesJson(content, importStrategy);
 
       if (!result.ok) {
-        setImportError(true);
-        setImportMessage(result.message);
+        updateStatus(result.message, true);
         return;
       }
 
-      setImportError(false);
-      setImportMessage(
+      setKeyword("");
+      updateStatus(
         result.strategy === "overwrite"
           ? `导入成功：已覆盖为 ${result.totalCount} 条记录。`
           : `导入成功：已恢复 ${result.importedCount} 条记录，当前共 ${result.totalCount} 条。`,
       );
-      setKeyword("");
     } catch {
-      setImportError(true);
-      setImportMessage("导入失败：读取文件时出现问题，请稍后再试。");
+      updateStatus("导入失败：读取文件时出现问题，请稍后再试。", true);
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleClearAll = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "此操作会清空当前浏览器中的全部道痕记录，且无法撤销，是否继续？",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    clearAllEntries();
+    setKeyword("");
+    updateStatus("已清空本地记录");
   };
 
   return (
@@ -130,14 +150,6 @@ export function HistoryList() {
             >
               {isImporting ? "正在导入…" : "导入 JSON"}
             </button>
-            {importMessage ? (
-              <p
-                className={`mt-3 text-xs leading-6 ${importError ? "text-[#a14f4f]" : "text-pine"}`}
-                data-testid="import-json-message"
-              >
-                {importMessage}
-              </p>
-            ) : null}
           </div>
 
           <button
@@ -155,6 +167,24 @@ export function HistoryList() {
             导出全部 JSON
           </button>
 
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="soft-button w-full"
+            data-testid="clear-all-button"
+          >
+            清空全部记录
+          </button>
+
+          {statusMessage ? (
+            <p
+              className={`text-xs leading-6 ${statusError ? "text-[#a14f4f]" : "text-pine"}`}
+              data-testid="history-status-message"
+            >
+              {statusMessage}
+            </p>
+          ) : null}
+
           <p className="text-sm leading-7 text-ink/70">
             共找到 <span className="font-medium text-ink">{entries.length}</span> 条记录。
           </p>
@@ -164,7 +194,10 @@ export function HistoryList() {
       <section className="section-card">
         <div className="flex flex-col gap-4 px-5 py-6 md:px-8 md:py-8">
           {entries.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-line px-5 py-10 text-center text-sm leading-7 text-ink/65">
+            <div
+              className="rounded-[28px] border border-dashed border-line px-5 py-10 text-center text-sm leading-7 text-ink/65"
+              data-testid="history-empty-state"
+            >
               暂时没有找到匹配记录。可以换一个关键词，或先回到首页留下今天这一笔。
             </div>
           ) : (
