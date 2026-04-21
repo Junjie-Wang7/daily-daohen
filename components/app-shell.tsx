@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
+import { AuthPanel } from "@/components/auth-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
@@ -31,11 +32,11 @@ export function AppShell({
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="space-y-3">
                 <p className="text-xs tracking-[0.35em] text-accent/80">MEI RI DAO HEN</p>
-                <h1 className="font-serif text-3xl text-ink md:text-4xl">{title}</h1>
-                <p className="max-w-2xl text-sm leading-7 text-ink/70">{subtitle}</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs leading-6 text-ink/55">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-line/70 bg-white/55 px-3 py-1">
-                    <span aria-hidden="true">🔒</span>
+                <h1 className="font-serif text-3xl text-ink md:text-4xl dark:text-stone-100">{title}</h1>
+                <p className="max-w-2xl text-sm leading-7 text-ink/70 dark:text-stone-200/70">{subtitle}</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs leading-6 text-ink/55 dark:text-stone-200/60">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-line/70 bg-white/55 px-3 py-1 dark:bg-white/5">
+                    <span aria-hidden="true">锁</span>
                     你的记录默认只保存在当前浏览器中
                   </span>
                   <span>这里是只属于你的安静角落。</span>
@@ -47,11 +48,7 @@ export function AppShell({
                     const active = pathname === link.href;
 
                     return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className={active ? "soft-button-primary" : "soft-button"}
-                      >
+                      <Link key={link.href} href={link.href} className={active ? "soft-button-primary" : "soft-button"}>
                         {link.label}
                       </Link>
                     );
@@ -62,6 +59,7 @@ export function AppShell({
             </div>
           </div>
         </header>
+        <AuthPanel />
         {children}
       </div>
     </main>

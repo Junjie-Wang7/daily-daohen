@@ -7,6 +7,7 @@ import {
   getStorageKey,
   importEntriesJson,
   MAX_IMPORT_FILE_SIZE_BYTES,
+  mergeJournalEntries,
   previewImportJson,
   readStore,
   saveEntry,
@@ -138,6 +139,32 @@ describe("storage helpers", () => {
     expect(readStore()).toEqual({ entries: [] });
     expect(window.localStorage.getItem(getStorageKey())).toBe(JSON.stringify({ entries: [] }));
   });
+
+  it("merges entries by date and keeps the latest updatedAt", () => {
+    const older = {
+      ...createEmptyEntry("2026-04-10"),
+      updatedAt: "2026-04-10T08:00:00.000Z",
+      answers: {
+        event: "旧记录",
+        reaction: "",
+        thought: "",
+        fear: "",
+        reason: "",
+        stone: "旧石头",
+        choice: "",
+      },
+    };
+    const newer = {
+      ...older,
+      updatedAt: "2026-04-10T09:00:00.000Z",
+      answers: {
+        ...older.answers,
+        stone: "新石头",
+      },
+    };
+
+    expect(mergeJournalEntries([older, newer])).toEqual([newer]);
+  });
 });
 
 describe("search and export", () => {
@@ -242,7 +269,7 @@ describe("import preview and import", () => {
       expect(preview.summary.replacedRecords).toBe(0);
       expect(preview.conflicts).toHaveLength(1);
       expect(preview.conflicts[0].date).toBe("2026-04-10");
-      expect(preview.conflicts[0].resolution).toContain("导入记录");
+      expect(preview.conflicts[0].resolution).toContain("备份中的较新记录");
     }
   });
 
@@ -304,7 +331,7 @@ describe("import preview and import", () => {
     expect(preview.ok).toBe(true);
     if (preview.ok) {
       expect(preview.conflicts).toHaveLength(1);
-      expect(preview.conflicts[0].resolution).toBe("将覆盖本地记录");
+      expect(preview.conflicts[0].resolution).toBe("将覆盖当前记录");
     }
   });
 
@@ -340,7 +367,7 @@ describe("import preview and import", () => {
 
     expect(preview).toEqual({
       ok: false,
-      message: "导入失败：文件不是合法的 JSON。",
+      message: "恢复失败：这个备份文件无法读取。",
     });
   });
 
@@ -349,7 +376,7 @@ describe("import preview and import", () => {
 
     expect(preview).toEqual({
       ok: false,
-      message: "导入失败：JSON 结构不符合要求，应为导出的 JSON 数组。",
+      message: "恢复失败：这个文件不像“每日道痕”的备份。",
     });
   });
 
@@ -358,7 +385,7 @@ describe("import preview and import", () => {
 
     expect(preview).toEqual({
       ok: false,
-      message: "导入失败：文件中没有可恢复的有效记录。",
+      message: "恢复失败：没有找到可以恢复的记录。",
     });
   });
 
@@ -367,7 +394,7 @@ describe("import preview and import", () => {
 
     expect(validation).toEqual({
       ok: false,
-      message: "无法导入：请选择 .json 格式的文件。",
+      message: "无法恢复：请选择从“每日道痕”备份出的文件。",
     });
   });
 
@@ -376,7 +403,7 @@ describe("import preview and import", () => {
 
     expect(validation).toEqual({
       ok: false,
-      message: "无法导入：文件大小超过限制，当前仅支持不超过 1 MB 的 JSON 文件。",
+      message: "无法恢复：备份文件过大，当前仅支持不超过 1 MB 的备份文件。",
     });
   });
 });

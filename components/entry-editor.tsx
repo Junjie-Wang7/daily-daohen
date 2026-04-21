@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { QUESTIONS, countAnsweredQuestions } from "@/lib/questions";
+import { getRecordHref } from "@/lib/routes";
 import {
   createEmptyEntry,
   downloadFile,
@@ -154,7 +155,7 @@ export function EntryEditor({
       return;
     }
 
-    router.push(`/records/${nextDate}`);
+    router.push(getRecordHref(nextDate));
   };
 
   const handleSave = () => {
@@ -269,7 +270,7 @@ export function EntryEditor({
                 立即留痕
               </button>
               <button type="button" onClick={handleExportMarkdown} className="soft-button">
-                导出本篇 Markdown
+                保存本篇为文稿
               </button>
               <Link href="/history" className="soft-button">
                 查看历史记录

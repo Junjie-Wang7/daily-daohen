@@ -2,6 +2,13 @@
 
 test.setTimeout(60000);
 
+test("user can keep using local mode when cloud login is not configured", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("auth-status")).toContainText("本地模式");
+  await expect(page.locator("textarea")).toHaveCount(7);
+});
+
 test("user can preview and confirm import before restoring a journal entry", async ({ page }, testInfo) => {
   await page.goto("/");
 
@@ -48,13 +55,13 @@ test("user can preview and confirm import before restoring a journal entry", asy
   await expect(page.getByTestId("import-preview")).toContainText("总记录数：");
   await expect(page.getByTestId("import-preview")).toContainText("将覆盖数：");
   await expect(page.getByTestId("import-conflict-list")).toContainText(currentDate);
-  await expect(page.getByTestId("import-conflict-list")).toContainText("将覆盖本地记录");
+  await expect(page.getByTestId("import-conflict-list")).toContainText("将覆盖当前记录");
 
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByTestId("confirm-import-button").click();
-  await expect(page.getByTestId("history-status-message")).toContainText("导入成功");
+  await expect(page.getByTestId("history-status-message")).toContainText("记录已恢复");
 
-  await page.goto(`/records/${currentDate}`);
+  await page.goto(`/records?date=${currentDate}`);
   await expect(page.locator("textarea").nth(0)).toHaveValue(originalAnswers[0]);
   await expect(page.locator("textarea").nth(5)).toHaveValue(originalAnswers[5]);
 });
@@ -66,7 +73,7 @@ test("user can switch date from the visible date input", async ({ page }) => {
   const targetDate = "2026-04-09";
   await page.locator('input[type="date"]').fill(targetDate);
 
-  await expect(page).toHaveURL(new RegExp(`/records/${targetDate}$`));
+  await expect(page).toHaveURL(new RegExp(`/records\\?date=${targetDate}$`));
   await expect(page.locator('input[type="date"]')).toHaveValue(targetDate);
 });
 
@@ -123,7 +130,7 @@ test("user can open the calendar and navigate to a record day", async ({ page })
   await expect(page.getByTestId("calendar-preview")).toContainText("月历测试记录");
 
   await page.getByRole("link", { name: "查看当天详情" }).click();
-  await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
+  await expect(page).toHaveURL(new RegExp(`/records\\?date=${currentDate}$`));
   await expect(page.locator("textarea").nth(0)).toHaveValue("月历测试记录");
 });
 
@@ -200,13 +207,26 @@ test("user can filter review entries by keyword, tag and stone, then clear the f
   ];
 
   for (const record of records) {
-    await page.goto(`/records/${record.date}`);
+    await page.goto(`/records?date=${record.date}`);
     await page.locator("textarea").nth(0).fill(record.event);
     await page.locator("textarea").nth(2).fill(record.thought);
     await page.locator("textarea").nth(3).fill(record.fear);
     await page.locator("textarea").nth(5).fill(record.stone);
     await page.locator('input:not([type="date"])').first().fill(record.tags);
     await page.getByRole("button", { name: "立即留痕" }).click();
+    await page.waitForFunction(
+      ({ date, event }) => {
+        const raw = window.localStorage.getItem("daily-daohen-store");
+        if (!raw) {
+          return false;
+        }
+        const store = JSON.parse(raw) as {
+          entries?: Array<{ date?: string; answers?: { event?: string } }>;
+        };
+        return store.entries?.some((entry) => entry.date === date && entry.answers?.event === event);
+      },
+      { date: record.date, event: record.event },
+    );
   }
 
   await page.getByRole("link", { name: "回顾" }).click();
@@ -232,7 +252,7 @@ test("user can filter review entries by keyword, tag and stone, then clear the f
   await expect(page.getByTestId("review-list").locator("a")).toHaveCount(3);
 
   await page.getByTestId(`review-item-${currentDate}`).click();
-  await expect(page).toHaveURL(new RegExp(`/records/${currentDate}$`));
+  await expect(page).toHaveURL(new RegExp(`/records\\?date=${currentDate}$`));
   await expect(page.locator("textarea").nth(0)).toHaveValue("我先想解释自己。");
 });
 
@@ -249,7 +269,7 @@ test("user sees a friendly empty state when the current review range has no reco
     return `${year}-${month}-${day}`;
   })();
 
-  await page.goto(`/records/${oldDate}`);
+  await page.goto(`/records?date=${oldDate}`);
   await page.locator("textarea").nth(0).fill("四十天前的记录");
   await page.locator("textarea").nth(5).fill("旧主石头");
   await page.getByRole("button", { name: "立即留痕" }).click();

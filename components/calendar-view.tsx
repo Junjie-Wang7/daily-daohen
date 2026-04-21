@@ -10,6 +10,7 @@ import {
   getMonthSummary,
   getRecentStreakInfo,
 } from "@/lib/calendar";
+import { getRecordHref } from "@/lib/routes";
 import { formatDisplayDate, readStore, todayDateString } from "@/lib/storage";
 
 function toMonthString(date: Date) {
@@ -209,7 +210,7 @@ export function CalendarView() {
                       </div>
                       <p className="text-sm leading-7 text-ink/70">{selectedPreview.tagLabel}</p>
                       <div className="flex flex-wrap gap-2 pt-1">
-                        <Link href={`/records/${selectedPreview.date}`} className="soft-button-primary">
+                        <Link href={getRecordHref(selectedPreview.date)} className="soft-button-primary">
                           查看当天详情
                         </Link>
                         <button type="button" onClick={handleClosePreview} className="soft-button">
@@ -223,7 +224,7 @@ export function CalendarView() {
                         这一天还没有留下道痕。你可以先写下今天，再回来查看这一格。
                       </div>
                       <div className="flex flex-wrap gap-2 pt-1">
-                        <Link href={`/records/${selectedPreview.date}`} className="soft-button-primary">
+                        <Link href={getRecordHref(selectedPreview.date)} className="soft-button-primary">
                           {selectedPreview.date === todayDateString() ? "去写今天" : "前往当天记录页"}
                         </Link>
                         <button type="button" onClick={handleClosePreview} className="soft-button">

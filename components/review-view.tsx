@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { readStore } from "@/lib/storage";
+import { getRecordHref } from "@/lib/routes";
 import {
   filterEntriesByReview,
   formatRangeLabel,
@@ -255,7 +256,7 @@ export function ReviewView() {
               {visibleEntries.map((entry) => (
                 <Link
                   key={entry.date}
-                  href={`/records/${entry.date}`}
+                  href={getRecordHref(entry.date)}
                   className="rounded-[28px] border border-line/70 bg-white/60 px-5 py-5 transition hover:border-accent/50 hover:bg-white/80"
                   data-testid={`review-item-${entry.date}`}
                 >

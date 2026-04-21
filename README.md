@@ -1,24 +1,38 @@
 # 每日道痕
 
-一个简洁、温和、偏东方留白风格的中文日记 Web 应用，用来记录每天的“道痕”。
+一个安静、克制、偏东方留白风格的中文日记 Web 应用，用来记录每天的“道痕”。
+
+“道痕”不是流水账，也不只是情绪。它是事情经过你之后，在你心里留下的痕。每天把它捞出来一点，是为了慢慢看见自己。
 
 ## 功能列表
 
 - 首页提供 7 个固定自省问题
+- 自动草稿保存
 - 按日期创建和查看记录
-- 历史记录列表
-- 按日期、标签、正文搜索
-- 标签录入与展示
-- 使用浏览器 `localStorage` 本地保存
-- 导出单篇 Markdown
-- 导出全部 JSON
-- 适配桌面端与移动端
+- 历史记录、搜索、标签
+- 月历视图与日期轻预览
+- 回顾页、关键词、标签和主石头筛选
+- 深色模式
+- 浏览器 `localStorage` 本地保存
+- 保存本篇为文稿、备份全部记录
+- 恢复备份、覆盖、合并、清空、撤销
+- 可选 CloudBase 微信登录入口
+
+## 登录与同步
+
+登录是可选能力。未配置 CloudBase 时，应用仍完整保留本地模式，记录默认只保存在当前浏览器。
+
+如需为中国大陆用户接入微信登录，请参考：
+
+- [中国大陆访问与微信登录方案](./docs/china-cloudbase-wechat.md)
+- [CloudBase 云托管部署](./docs/cloudbase-deploy.md)
 
 ## 技术栈
 
 - Next.js 15
 - TypeScript
 - Tailwind CSS
+- CloudBase Web SDK
 - Vitest
 - Playwright
 
@@ -35,6 +49,18 @@ npm run dev
 http://localhost:3000
 ```
 
+## 环境变量
+
+复制 `.env.example` 为 `.env.local`，按需填写：
+
+```bash
+NEXT_PUBLIC_CLOUDBASE_ENV_ID=
+NEXT_PUBLIC_WECHAT_APP_ID=
+NEXT_PUBLIC_WECHAT_SCOPE=snsapi_login
+```
+
+留空时会保持本地模式。
+
 ## 构建命令
 
 ```bash
@@ -50,37 +76,16 @@ npm run test:e2e
 npm test
 ```
 
-第一次运行 E2E 时，如果本机还没有 Playwright 浏览器，可执行：
+首次运行 E2E 时，如果本机还没有 Playwright 浏览器，可执行：
 
 ```bash
 npx playwright install chromium
 ```
 
-## 项目结构
+## CloudBase 部署
 
-```text
-app/              App Router 页面
-components/       页面与交互组件
-lib/              数据模型、问题定义、localStorage 逻辑
-tests/unit/       单元测试
-tests/e2e/        端到端测试
+当前项目推荐部署到 CloudBase 云托管，端口为 `3000`。本项目已包含 `Dockerfile` 与 `standalone` 构建配置。
+
+```bash
+npm run deploy:cloudbase
 ```
-
-## 部署建议
-
-适合优先部署到：
-
-- Vercel：最适合 Next.js，部署最省心
-- Netlify：可用于静态与 Node 运行场景
-- 自托管 Node 环境：适合后续接登录、云同步、数据库
-
-当前项目上线前还差的内容：
-
-- 统一生产环境监控与错误上报
-- 更完整的多浏览器回归测试
-- 可选的数据备份或云同步方案
-- 上线环境的隐私说明与导出/恢复说明
-
-## 当前状态
-
-项目已完成基础 QA、自测、依赖安全修复和自动化测试补齐，适合继续开发和对外演示。

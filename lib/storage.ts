@@ -134,6 +134,10 @@ function dedupeEntries(entries: JournalEntry[]) {
   return sortEntries(Array.from(map.values()));
 }
 
+export function mergeJournalEntries(entries: JournalEntry[]) {
+  return dedupeEntries(entries);
+}
+
 function parseImportEntries(content: string) {
   let parsed: unknown;
 
@@ -142,7 +146,7 @@ function parseImportEntries(content: string) {
   } catch {
     return {
       ok: false as const,
-      message: "导入失败：文件不是合法的 JSON。",
+      message: "恢复失败：这个备份文件无法读取。",
     };
   }
 
@@ -155,7 +159,7 @@ function parseImportEntries(content: string) {
   if (!rawEntries) {
     return {
       ok: false as const,
-      message: "导入失败：JSON 结构不符合要求，应为导出的 JSON 数组。",
+      message: "恢复失败：这个文件不像“每日道痕”的备份。",
     };
   }
 
@@ -166,7 +170,7 @@ function parseImportEntries(content: string) {
   if (entries.length === 0) {
     return {
       ok: false as const,
-      message: "导入失败：文件中没有可恢复的有效记录。",
+      message: "恢复失败：没有找到可以恢复的记录。",
     };
   }
 
@@ -180,16 +184,16 @@ export function validateImportFile(fileName: string, fileSize: number) {
   if (!fileName.toLowerCase().endsWith(".json")) {
     return {
       ok: false as const,
-      message: "无法导入：请选择 .json 格式的文件。",
+      message: "无法恢复：请选择从“每日道痕”备份出的文件。",
     };
   }
 
   if (fileSize > MAX_IMPORT_FILE_SIZE_BYTES) {
     return {
       ok: false as const,
-      message: `无法导入：文件大小超过限制，当前仅支持不超过 ${Math.floor(
+      message: `无法恢复：备份文件过大，当前仅支持不超过 ${Math.floor(
         MAX_IMPORT_FILE_SIZE_BYTES / 1024 / 1024,
-      )} MB 的 JSON 文件。`,
+      )} MB 的备份文件。`,
     };
   }
 
@@ -259,7 +263,7 @@ export function previewImportJson(
   if (typeof window === "undefined") {
     return {
       ok: false,
-      message: "导入失败：当前环境不支持浏览器本地恢复。",
+      message: "恢复失败：当前环境不支持浏览器本地恢复。",
     };
   }
 
@@ -289,10 +293,10 @@ export function previewImportJson(
         importUpdatedAt: entry.updatedAt,
         resolution:
           strategy === "overwrite"
-            ? "将覆盖本地记录"
+            ? "将覆盖当前记录"
             : keepImported
-              ? "将按 updatedAt 保留导入记录"
-              : "将按 updatedAt 保留本地记录",
+              ? "将按更新时间保留备份中的较新记录"
+              : "将按更新时间保留当前浏览器中的较新记录",
       };
     });
 

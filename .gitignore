@@ -4,6 +4,8 @@ dist
 out
 coverage
 *.log
+*.zip
+.env*.local
 .DS_Store
 Thumbs.db
 

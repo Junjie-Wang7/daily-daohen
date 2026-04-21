@@ -16,6 +16,7 @@ import {
   searchEntries,
   validateImportFile,
 } from "@/lib/storage";
+import { getRecordHref } from "@/lib/routes";
 import { JournalEntry } from "@/lib/types";
 
 type PendingImport = {
@@ -115,9 +116,9 @@ export function HistoryList() {
         summary: preview.summary,
         conflicts: preview.conflicts,
       });
-      updateStatus("已生成导入预览，请确认后再执行。");
+      updateStatus("已生成恢复前确认，请确认后再继续。");
     } catch {
-      updateStatus("导入失败：读取文件时出现问题，请稍后再试。", true);
+      updateStatus("恢复失败：读取备份文件时出现问题，请稍后再试。", true);
     } finally {
       setIsImporting(false);
     }
@@ -131,7 +132,7 @@ export function HistoryList() {
     if (
       pendingImport.strategy === "overwrite" &&
       typeof window !== "undefined" &&
-      !window.confirm("覆盖模式会替换当前浏览器中的全部记录，是否继续导入？")
+      !window.confirm("覆盖恢复会替换当前浏览器中的全部记录，是否继续？")
     ) {
       return;
     }
@@ -148,8 +149,8 @@ export function HistoryList() {
     clearUndoState();
     updateStatus(
       result.strategy === "overwrite"
-        ? `导入成功：已覆盖为 ${result.totalCount} 条记录。`
-        : `导入成功：已恢复 ${result.importedCount} 条记录，当前共 ${result.totalCount} 条。`,
+        ? `记录已恢复：已覆盖为 ${result.totalCount} 条记录。`
+        : `记录已恢复：已恢复 ${result.importedCount} 条记录，当前共 ${result.totalCount} 条。`,
     );
   };
 
@@ -211,9 +212,9 @@ export function HistoryList() {
           </div>
 
           <div className="rounded-[28px] border border-line/70 bg-white/50 px-4 py-4">
-            <p className="text-sm text-ink">导入 JSON</p>
+            <p className="text-sm text-ink">恢复备份</p>
             <p className="mt-2 text-xs leading-6 text-ink/70">
-              先解析并预览导入内容，确认后才会真正恢复到当前浏览器。
+              先看一眼备份内容，确认后才会真正恢复到当前浏览器。
             </p>
             <p className="mt-2 text-xs leading-6 text-ink/60">
               文件大小限制：不超过 {Math.floor(MAX_IMPORT_FILE_SIZE_BYTES / 1024 / 1024)} MB。
@@ -227,7 +228,7 @@ export function HistoryList() {
                   checked={importStrategy === "merge"}
                   onChange={() => setImportStrategy("merge")}
                 />
-                <span>合并到本地数据</span>
+                <span>合并到当前记录</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -237,7 +238,7 @@ export function HistoryList() {
                   checked={importStrategy === "overwrite"}
                   onChange={() => setImportStrategy("overwrite")}
                 />
-                <span>覆盖本地数据</span>
+                <span>覆盖当前记录</span>
               </label>
             </div>
             <input
@@ -255,7 +256,7 @@ export function HistoryList() {
               disabled={isImporting}
               data-testid="import-json-button"
             >
-              {isImporting ? "正在解析…" : "选择 JSON 文件"}
+              {isImporting ? "正在读取…" : "选择备份文件"}
             </button>
           </div>
 
@@ -264,7 +265,7 @@ export function HistoryList() {
               className="rounded-[28px] border border-line/70 bg-rice/70 px-4 py-4"
               data-testid="import-preview"
             >
-              <p className="text-sm text-ink">导入预览</p>
+              <p className="text-sm text-ink">恢复前确认</p>
               <p className="mt-2 text-xs leading-6 text-ink/70">
                 文件：{pendingImport.fileName}
               </p>
@@ -292,7 +293,7 @@ export function HistoryList() {
                       >
                         <p>日期：{conflict.date}</p>
                         <p>本地更新时间：{new Date(conflict.localUpdatedAt).toLocaleString("zh-CN")}</p>
-                        <p>导入更新时间：{new Date(conflict.importUpdatedAt).toLocaleString("zh-CN")}</p>
+                        <p>备份更新时间：{new Date(conflict.importUpdatedAt).toLocaleString("zh-CN")}</p>
                         <p className="text-accent">{conflict.resolution}</p>
                       </div>
                     ))}
@@ -306,7 +307,7 @@ export function HistoryList() {
               ) : null}
               {pendingImport.strategy === "overwrite" ? (
                 <p className="mt-3 text-xs leading-6 text-accent/80">
-                  覆盖模式会替换当前浏览器中的全部记录，请确认无误后再继续。
+                  覆盖恢复会替换当前浏览器中的全部记录，请确认无误后再继续。
                 </p>
               ) : null}
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -316,7 +317,7 @@ export function HistoryList() {
                   className="soft-button-primary"
                   data-testid="confirm-import-button"
                 >
-                  确认导入
+                  确认恢复
                 </button>
                 <button
                   type="button"
@@ -334,7 +335,7 @@ export function HistoryList() {
             type="button"
             onClick={() =>
               downloadFile(
-                "道痕全集.json",
+                "每日道痕-全部备份.json",
                 exportAllEntriesJson(),
                 "application/json;charset=utf-8",
               )
@@ -342,7 +343,7 @@ export function HistoryList() {
             className="soft-button-primary w-full"
             data-testid="export-json-button"
           >
-            导出全部 JSON
+            备份全部记录
           </button>
 
           <button
@@ -423,7 +424,7 @@ export function HistoryList() {
                       )}
                     </div>
                   </div>
-                  <Link href={`/records/${entry.date}`} className="soft-button">
+                  <Link href={getRecordHref(entry.date)} className="soft-button">
                     查看当天
                   </Link>
                 </div>
