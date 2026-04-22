@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -45,6 +46,7 @@ export function EntryEditor({
   const [tagsInput, setTagsInput] = useState("");
   const [savedAt, setSavedAt] = useState("");
   const [saveNotice, setSaveNotice] = useState("正在等待第一笔留痕");
+  const [showSupport, setShowSupport] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const isToday = date === todayDateString();
   const answeredCount = countAnsweredQuestions(entry.answers);
@@ -301,6 +303,46 @@ export function EntryEditor({
             <div className="rounded-3xl border border-dashed border-line px-4 py-4 text-sm leading-7 text-ink/75">
               今天的“主石头”，不一定是最大的难题，而是最值得继续追问的那一块。
             </div>
+          </div>
+        </section>
+
+        <section className="section-card">
+          <div className="space-y-4 px-5 py-6 md:px-6">
+            <div>
+              <p className="text-xs tracking-[0.3em] text-accent/80">SUPPORT</p>
+              <h3 className="mt-2 font-serif text-xl">支持作者</h3>
+            </div>
+            <p className="text-sm leading-7 text-ink/70">
+              如果每日道痕陪你安静地回看过一天，也可以请作者喝杯茶。感谢你的支持。
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowSupport((current) => !current)}
+              className="soft-button w-full"
+              aria-expanded={showSupport}
+              aria-controls="support-author-panel"
+              data-testid="support-author-toggle"
+            >
+              {showSupport ? "收起收款码" : "展开收款码"}
+            </button>
+            {showSupport ? (
+              <div
+                id="support-author-panel"
+                className="rounded-3xl border border-line/70 bg-white/60 p-4 dark:bg-white/5"
+                data-testid="support-author-panel"
+              >
+                <Image
+                  src="/reward-code.jpg"
+                  alt="支持作者收款码"
+                  width={440}
+                  height={440}
+                  className="mx-auto aspect-square w-full max-w-[220px] rounded-2xl bg-white object-cover p-2"
+                />
+                <p className="mt-3 text-center text-xs leading-6 text-ink/60">
+                  扫码支持即可，心意到了就好。
+                </p>
+              </div>
+            ) : null}
           </div>
         </section>
       </aside>

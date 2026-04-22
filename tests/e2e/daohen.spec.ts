@@ -208,10 +208,14 @@ test("user can filter review entries by keyword, tag and stone, then clear the f
 
   for (const record of records) {
     await page.goto(`/records?date=${record.date}`);
-    await page.locator("textarea").nth(0).fill(record.event);
-    await page.locator("textarea").nth(2).fill(record.thought);
-    await page.locator("textarea").nth(3).fill(record.fear);
-    await page.locator("textarea").nth(5).fill(record.stone);
+    await expect(page.locator('input[type="date"]')).toHaveValue(record.date);
+    await expect(page.locator("textarea")).toHaveCount(7);
+
+    const textareas = page.locator("textarea");
+    await textareas.nth(0).fill(record.event);
+    await textareas.nth(2).fill(record.thought);
+    await textareas.nth(3).fill(record.fear);
+    await textareas.nth(5).fill(record.stone);
     await page.locator('input:not([type="date"])').first().fill(record.tags);
     await page.getByRole("button", { name: "立即留痕" }).click();
     await page.waitForFunction(
@@ -299,6 +303,20 @@ test("user can open and close the lightweight introduction on the home page", as
   await page.getByTestId("home-intro-close").click();
   await expect(page.getByTestId("home-intro-toggle")).toBeVisible();
   await expect(page.locator("textarea")).toHaveCount(7);
+});
+
+test("user can open the quiet support author card", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("support-author-toggle")).toBeVisible();
+  await page.getByTestId("support-author-toggle").click();
+
+  await expect(page.getByTestId("support-author-panel")).toBeVisible();
+  await expect(page.getByTestId("support-author-panel")).toContainText("扫码支持即可");
+  await expect(page.getByAltText("支持作者收款码")).toBeVisible();
+
+  await page.getByTestId("support-author-toggle").click();
+  await expect(page.getByTestId("support-author-panel")).toBeHidden();
 });
 
 test("user can switch to dark mode and keep it after refresh", async ({ page }) => {
